@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+/********************************************************************************\
+| WARNING: This module is NOT finished, yet.
+\********************************************************************************/
+
 define('AKISMET_API_HOST', 'rest.akismet.com');
 define('AKISMET_API_PORT', 80);
 define('AKISMET_API_VERSION', '1.1');

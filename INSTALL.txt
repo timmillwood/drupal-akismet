@@ -9,7 +9,7 @@ Drupal: 4.7
 ********************************************************************
 WARNING:
 
-This module doesn not work yet. It is still under development !!!
+This module doesn not work, yet. It is still under development !!!
 
 
 ********************************************************************
