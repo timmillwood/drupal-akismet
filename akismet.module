@@ -1,0 +1,265 @@
+<?php
+// $Id$
+
+define('AKISMET_API_HOST', 'rest.akismet.com');
+define('AKISMET_API_PORT', 80);
+define('AKISMET_API_VERSION', '1.1');
+define('AKISMET_USERAGENT', 'Drupal/4.7 | akismet.module/1.0');
+
+/**
+ * Implementation of hook_help().
+ */
+function akismet_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      $output = t('Use <a href="%akismet">akismet</a> service to protect your site from being spammed.', array('%akismet' => 'http://akismet.com'));
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_settings().
+ */
+function akismet_settings() {
+  $form = array();
+  $form['akismet'] = array(
+    '#type' => 'fieldset', '#title' => t('Akismet settings'),
+    '#collapsible' => TRUE, '#collapsed' => (variable_get('akismet_wpapikey', '') != '' ? TRUE : FALSE)
+  );
+  $form['akismet']['akismet_wpapikey'] = array(
+    '#type' => 'textfield', '#title' => t('WordPress.com API key'),
+    '#size' => 30, '#maxlength' => 60,
+    '#default_value' => variable_get('akismet_wpapikey', ''),
+    '#description' => t('Please, enter here your <a href="%wpapikey">WordPress.com API key</a>. Note that this information is required in order to use the <a href="%akismet">akismet</a> service. Please, consult the <a href="%akismet-faq">akismet FAQ</a> for further information.', array('%wpapikey' => 'http://wordpress.com/api-keys/', '%akismet' => 'http://akismet.com', '%akismet-faq' => 'http://akismet.com/faq/'))
+  );
+
+  // @TODO Not sure yet what kind of settings we need.
+
+  $form['content'] = array(
+    '#type' => 'fieldset', '#title' => t('Content settings'),
+    '#collapsible' => TRUE, '#collapsed' => TRUE
+  );
+  if (module_exist('comment')) {
+    $form['comment'] = array(
+      '#type' => 'fieldset', '#title' => t('Comment settings'),
+      '#collapsible' => TRUE, '#collapsed' => TRUE
+    );
+  }
+  return $form;
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function akismet_form_alter($form_id, &$form) {
+
+  // @TODO Not sure yet where do we check the comment.
+
+  if ($form_id == 'comment_form') {
+  }
+}
+
+/**
+ * Implementation of hook_comment().
+ */
+function akismet_comment(&$comment, $op) {
+
+  // @TODO Not sure yet where do we check the comment.
+
+  switch ($op) {
+    case 'form':
+      // Append more fields into the comment form
+      break;
+    case 'update':
+      // Called from comment_save(), after SQL UPDATE operation.
+      break;
+    case 'insert':
+      // Called from comment_save(), after SQL INSERT operation.
+      $cid = $comment['cid'];
+      $data = db_fetch_object(db_query('SELECT * FROM {comments} WHERE cid = %d', $cid));
+      if ($data->status == COMMENT_NOT_PUBLISHED) {
+      }
+      break;
+    case 'validate':
+      // Validate comment, can't modify comment fields from here!
+      break;
+    case 'view':
+      // Called from theme_comment_view(), before calling theme('comment'); can modify comment fields.
+      break;
+    case 'delete':
+      // Called from _comment_delete_thread(), after SQL DELETE operation.
+      break;
+  }
+}
+
+/**
+ * Perpare comment data that is to be sent along akismet requests.
+ *
+ * @param object $comment
+ *
+ * @return array
+ */
+function _akismet_get_comment_data($comment) {
+  $comment_keys = array(
+    // IP address of the comment submitter.
+    'user_ip' => (!empty($comment->hostname) ? $comment->hostname : $_SERVER['REMOTE_ADDR']),
+    // User agent information of the comment submitter.
+    'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+    // The content of the HTTP_REFERER header should be sent here.
+    'referrer' => $_SERVER['HTTP_REFERER'],
+
+    // @TODO The rest of this array is not finished !!!!
+
+    // The permanent location of the entry the comment was submitted to.
+    'permalink' => "comment-$comment->cid",
+    // May be blank, comment, trackback, pingback, or a made up value like "registration".
+    'comment_type' => '',
+    // Submitted name with the comment.
+    'comment_author' => '',
+    // Submitted email address.
+    'comment_author_email' => '',
+    // Commenter URL.
+    'comment_author_url' => '',
+    // The content that was submitted.
+    'comment_content' => ''
+  );
+  $comment_data = array();
+  foreach ($comment_keys as $akismet_key => $value) {
+    $comment_data[$akismet_key] = $value;
+  }
+  return $comment_data;
+}
+
+/**
+ * Perpare $_SERVER data that is to be sent along akismet requests.
+ *
+ * @return array
+ */
+function _akismet_get_server_data() {
+  // Ignore keys inspired by {@link http://www.achingbrain.net Alex Potsides}
+  // This prevents some potentially sensitive information from being sent accross the wire.
+  static $ignore = array(
+    'HTTP_COOKIE',
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_X_FORWARDED_HOST',
+    'HTTP_MAX_FORWARDS',
+    'HTTP_X_FORWARDED_SERVER',
+    'REDIRECT_STATUS',
+    'SERVER_PORT',
+    'PATH',
+    'DOCUMENT_ROOT',
+    'SERVER_ADMIN',
+    'QUERY_STRING',
+    'PHP_SELF'
+  );
+  $server_data = array();
+  foreach ($_SERVER as $key => $value) {
+    if (!in_array($key, $ignore)) {
+      $server_data["$key"] = $value;
+    }
+  }
+  return $server_data;
+}
+
+/**
+ *
+ */
+function _akismet_get_query_string($array) {
+  global $base_url;
+  $string = "blog=$base_url";
+  foreach ($array as $key => $value) {
+    $string .= '&' . $key . '=' . urlencode(stripslashes($value));
+  }
+  return $string;
+}
+
+/**
+ * Perform a HTTP POST request against the akismet server.
+ *
+ * @param string $request
+ *   The request.
+ * @param string $host
+ *   The akismet host, prefixed with the API key (except when checking for the key itself).
+ * @param string $path
+ *   The path where to perform the request.
+ *
+ * @return array
+ *   Headers in $response[0] and entity in $response[1]
+ */
+function _akismet_http_post($request, $host, $path) {
+  $fsock_timeout = 3;
+
+  $http_request = "POST $path HTTP/1.0\r\n"
+    ."Host: $host\r\n"
+    ."Content-Type: application/x-www-form-urlencoded; charset=utf-8\r\n"
+    ."Content-Length: ". strlen($request) ."\r\n"
+    ."User-Agent: ". AKISMET_USERAGENT ."\r\n"
+    ."\r\n"
+    .$request;
+
+  $response = '';
+  if (false !== ($fs = @fsockopen($host, AKISMET_API_PORT, $errno, $errstr, $fsock_timeout))) {
+    fwrite($fs, $http_request);
+    while (!feof($fs)) {
+      $response .= fgets($fs, 1160); // One TCP-IP packet
+    }
+    fclose($fs);
+    $response = explode("\r\n\r\n", $response, 2);
+  }
+  return $response;
+}
+
+/**
+ * Akismet API: Key Verification — rest.akismet.com/1.1/verify key
+ *
+ * @return boolean
+ *   Returns TRUE if API key is valid.
+ */
+function _akismet_api_verify_key() {
+  global $base_url;
+  $key = variable_get('akismet_wpapikey', '');
+  $request = "key=$key&blog=$base_url";
+  $response = _akismet_http_post($request, AKISMET_API_HOST, '/'. AKISMET_API_VERSION .'/verify-key');
+  return ('valid' == $response[1] ? TRUE : FALSE);
+}
+
+/**
+ * Akismet API: Comment Check — api-key.rest.akismet.com/1.1/comment-check
+ *
+ * @param object $comment
+ *
+ * @return boolean
+ *   Returns TRUE if the comment IS spam.
+ */
+function _akismet_api_comment_check($comment) {
+  $request_data = array_merge(_akismet_get_server_data(), _akismet_get_comment_data($comment));
+  $query_string = _akismet_get_query_string($request_data);
+  $host = variable_get('akismet_wpapikey', '') . AKISMET_API_HOST;
+  $response = _akismet_http_post($query_string, $host, '/'. AKISMET_API_VERSION .'/comment-check');
+  return ('true' == $response[1] ? TRUE : FALSE);
+}
+
+/**
+ * Akismet API: Submit Spam — api-key.rest.akismet.com/1.1/submit-spam
+ *
+ * @param object $comment
+ */
+function _akismet_api_submit_spam($comment) {
+  $request_data = _akismet_get_comment_data($comment);
+  $query_string = _akismet_get_query_string($request_data);
+  $host = variable_get('akismet_wpapikey', '') . AKISMET_API_HOST;
+  $response = _akismet_http_post($query_string, $host, '/'. AKISMET_API_VERSION .'/submit-spam');
+}
+
+/**
+ * Akismet API: Submit Ham — api-key.rest.akismet.com/1.1/submit-ham
+ *
+ * @param object $comment
+ */
+function _akismet_api_submit_ham($comment) {
+  $request_data = _akismet_get_comment_data($comment);
+  $query_string = _akismet_get_query_string($request_data);
+  $host = variable_get('akismet_wpapikey', '') . AKISMET_API_HOST;
+  $response = _akismet_http_post($query_string, $host, '/'. AKISMET_API_VERSION .'/submit-ham');
+}

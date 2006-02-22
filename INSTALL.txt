@@ -1,0 +1,28 @@
+$Id$
+********************************************************************
+                    D R U P A L    M O D U L E                     
+********************************************************************
+Name  : akismet
+Author: markus_petrux  [ http://www.phpmix.org ]
+Drupal: 4.7
+
+********************************************************************
+WARNING:
+
+This module doesn not work yet. It is still under development !!!
+
+
+********************************************************************
+INSTALLATION:
+
+1. Create the folder 'modules/akismet'
+
+2. Copy all modules files, keeping directory structure, to the
+   folder 'modules/akismet'
+
+3. Enable the akismet module in 'admin/modules'
+
+4. You're done.
+
+********************************************************************
+Please, see the file README.txt for further information.
