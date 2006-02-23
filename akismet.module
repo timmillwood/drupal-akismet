@@ -27,18 +27,33 @@ function akismet_help($section) {
  */
 function akismet_settings() {
   $form = array();
+
+  $akismet_wpapikey = variable_get('akismet_wpapikey', '');
+  if (empty($akismet_wpapikey)) {
+    $akismet_collapsed = FALSE;
+  }
+  else {
+    $is_valid = _akismet_api_verify_key($akismet_wpapikey);
+    $akismet_collapsed = $is_valid;
+  }
+
   $form['akismet'] = array(
     '#type' => 'fieldset', '#title' => t('Akismet settings'),
-    '#collapsible' => TRUE, '#collapsed' => (variable_get('akismet_wpapikey', '') != '' ? TRUE : FALSE)
+    '#collapsible' => TRUE, '#collapsed' => $akismet_collapsed
   );
   $form['akismet']['akismet_wpapikey'] = array(
     '#type' => 'textfield', '#title' => t('WordPress.com API key'),
     '#size' => 30, '#maxlength' => 60,
-    '#default_value' => variable_get('akismet_wpapikey', ''),
-    '#description' => t('Please, enter here your <a href="%wpapikey">WordPress.com API key</a>. Note that this information is required in order to use the <a href="%akismet">akismet</a> service. Please, consult the <a href="%akismet-faq">akismet FAQ</a> for further information.', array('%wpapikey' => 'http://wordpress.com/api-keys/', '%akismet' => 'http://akismet.com', '%akismet-faq' => 'http://akismet.com/faq/'))
+    '#default_value' => $akismet_wpapikey,
+    '#description' => t('<p>Please, enter here your <a href="%wpapikey">WordPress.com API key</a>. Note that this information is required in order to use the <a href="%akismet">akismet</a> service. Please, consult the <a href="%akismet-faq">akismet FAQ</a> for further information.</p>', array('%wpapikey' => 'http://wordpress.com/api-keys/', '%akismet' => 'http://akismet.com', '%akismet-faq' => 'http://akismet.com/faq/'))
   );
+  if (!empty($akismet_wpapikey) && !$is_valid) {
+    $form['akismet']['akismet_wpapikey']['#description'] .= '<div class="marker">'. t("<p>Your API Key doesn't seem to be valid!</p>") .'</div>';
+  }
 
   // @TODO Not sure yet what kind of settings we need.
+  // We may wish to validate content creation? ...from users of specified roles?
+  // We may wish to validate comments from guests or from users of specified roles?
 
   $form['content'] = array(
     '#type' => 'fieldset', '#title' => t('Content settings'),
@@ -54,46 +69,20 @@ function akismet_settings() {
 }
 
 /**
- * Implementation of hook_form_alter().
- */
-function akismet_form_alter($form_id, &$form) {
-
-  // @TODO Not sure yet where do we check the comment.
-
-  if ($form_id == 'comment_form') {
-  }
-}
-
-/**
  * Implementation of hook_comment().
  */
 function akismet_comment(&$comment, $op) {
+  if ($op == 'insert') {
+    // Called from comment_save(), after INSERT operation.
+    $cid = $comment['cid'];
+    $comment_obj = db_fetch_object(db_query('SELECT c.*, u.name AS registered_name FROM {comments} c INNER JOIN {users} u ON u.uid = c.uid WHERE c.cid = %d', $cid));
+    $comment_obj->name = $comment_obj->uid ? $comment_obj->registered_name : $comment_obj->name;
+    if ($comment_obj->status == COMMENT_PUBLISHED) {
+      $is_spam = _akismet_api_comment_check($comment_obj);
 
-  // @TODO Not sure yet where do we check the comment.
+      // @TODO: What do we do if this is spam? Not sure, yet.
 
-  switch ($op) {
-    case 'form':
-      // Append more fields into the comment form
-      break;
-    case 'update':
-      // Called from comment_save(), after SQL UPDATE operation.
-      break;
-    case 'insert':
-      // Called from comment_save(), after SQL INSERT operation.
-      $cid = $comment['cid'];
-      $data = db_fetch_object(db_query('SELECT * FROM {comments} WHERE cid = %d', $cid));
-      if ($data->status == COMMENT_NOT_PUBLISHED) {
-      }
-      break;
-    case 'validate':
-      // Validate comment, can't modify comment fields from here!
-      break;
-    case 'view':
-      // Called from theme_comment_view(), before calling theme('comment'); can modify comment fields.
-      break;
-    case 'delete':
-      // Called from _comment_delete_thread(), after SQL DELETE operation.
-      break;
+    }
   }
 }
 
@@ -112,25 +101,22 @@ function _akismet_get_comment_data($comment) {
     'user_agent' => $_SERVER['HTTP_USER_AGENT'],
     // The content of the HTTP_REFERER header should be sent here.
     'referrer' => $_SERVER['HTTP_REFERER'],
-
-    // @TODO The rest of this array is not finished !!!!
-
     // The permanent location of the entry the comment was submitted to.
-    'permalink' => "comment-$comment->cid",
+    'permalink' => url("node/$comment->nid", NULL, "comment-$comment->cid", TRUE),
     // May be blank, comment, trackback, pingback, or a made up value like "registration".
     'comment_type' => '',
     // Submitted name with the comment.
-    'comment_author' => '',
+    'comment_author' => $comment->name,
     // Submitted email address.
-    'comment_author_email' => '',
+    'comment_author_email' => $comment->mail,
     // Commenter URL.
-    'comment_author_url' => '',
+    'comment_author_url' => $comment->homepage,
     // The content that was submitted.
-    'comment_content' => ''
+    'comment_content' => $comment->comment
   );
   $comment_data = array();
-  foreach ($comment_keys as $akismet_key => $value) {
-    $comment_data[$akismet_key] = $value;
+  foreach ($comment_keys as $key => $value) {
+    $comment_data[$key] = $value;
   }
   return $comment_data;
 }
@@ -141,25 +127,31 @@ function _akismet_get_comment_data($comment) {
  * @return array
  */
 function _akismet_get_server_data() {
-  // Ignore keys inspired by {@link http://www.achingbrain.net Alex Potsides}
-  // This prevents some potentially sensitive information from being sent accross the wire.
-  static $ignore = array(
-    'HTTP_COOKIE',
-    'HTTP_X_FORWARDED_FOR',
-    'HTTP_X_FORWARDED_HOST',
-    'HTTP_MAX_FORWARDS',
-    'HTTP_X_FORWARDED_SERVER',
-    'REDIRECT_STATUS',
-    'SERVER_PORT',
-    'PATH',
-    'DOCUMENT_ROOT',
-    'SERVER_ADMIN',
-    'QUERY_STRING',
-    'PHP_SELF'
+  // You may add more elements here, but they are often related to internal server
+  // data that makes little sense to check whether a comment is spam or not.
+  // Do not send HTTP_COOKIE as it may compromise user privacy!
+  static $safe_to_send = array(
+    'CONTENT_LENGTH',
+    'CONTENT_TYPE',
+    'HTTP_ACCEPT',
+    'HTTP_ACCEPT_CHARSET',
+    'HTTP_ACCEPT_ENCODING',
+    'HTTP_ACCEPT_LANGUAGE',
+    'HTTP_REFERER',
+    'HTTP_USER_AGENT',
+    'REMOTE_ADDR',
+    'REMOTE_PORT',
+    'SCRIPT_URI',
+    'SCRIPT_URL',
+    'SERVER_ADDR',
+    'SERVER_NAME',
+    'REQUEST_METHOD',
+    'REQUEST_URI',
+    'SCRIPT_NAME'
   );
   $server_data = array();
   foreach ($_SERVER as $key => $value) {
-    if (!in_array($key, $ignore)) {
+    if (in_array($key, $safe_to_send)) {
       $server_data["$key"] = $value;
     }
   }
@@ -167,7 +159,11 @@ function _akismet_get_server_data() {
 }
 
 /**
+ * Convert an associative array into a string formatted according to akismet rules.
  *
+ * @param array
+ *
+ * @return string
  */
 function _akismet_get_query_string($array) {
   global $base_url;
@@ -220,9 +216,8 @@ function _akismet_http_post($request, $host, $path) {
  * @return boolean
  *   Returns TRUE if API key is valid.
  */
-function _akismet_api_verify_key() {
+function _akismet_api_verify_key($key) {
   global $base_url;
-  $key = variable_get('akismet_wpapikey', '');
   $request = "key=$key&blog=$base_url";
   $response = _akismet_http_post($request, AKISMET_API_HOST, '/'. AKISMET_API_VERSION .'/verify-key');
   return ('valid' == $response[1] ? TRUE : FALSE);
