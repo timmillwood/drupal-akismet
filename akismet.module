@@ -82,6 +82,11 @@ function akismet_comment(&$comment, $op) {
 
       // @TODO: What do we do if this is spam? Not sure, yet.
 
+      if ($is_spam) {
+        // For now, we unpublish the comment and prefix the subject with [SPAM]
+        $subject = t('[SPAM] ') . $comment_obj->subject;
+        db_query("UPDATE {comments} SET status = %d, subject = '%s' WHERE cid = %d", COMMENT_NOT_PUBLISHED, $subject, $cid);
+      }
     }
   }
 }
