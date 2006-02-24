@@ -3,6 +3,16 @@
 
 /********************************************************************************\
 | WARNING: This module is NOT finished, yet.
+|
+| @TODO: Some critical details may depend on several issues I've found/reported related to the comment.module
+|
+| http://drupal.org/project/issues/drupal?components=comment.module&states=1,8,13,14,2&submitted=markus_petrux
+|
+| I agree that not all issues are critical, however...
+|
+| If you read this, please help to review/complete those issues, so they get into core
+| before final 4.7. Thanks
+|
 \********************************************************************************/
 
 define('AKISMET_API_HOST', 'rest.akismet.com');
@@ -78,14 +88,15 @@ function akismet_comment(&$comment, $op) {
     $comment_obj = db_fetch_object(db_query('SELECT c.*, u.name AS registered_name FROM {comments} c INNER JOIN {users} u ON u.uid = c.uid WHERE c.cid = %d', $cid));
     $comment_obj->name = $comment_obj->uid ? $comment_obj->registered_name : $comment_obj->name;
     if ($comment_obj->status == COMMENT_PUBLISHED) {
-      $is_spam = _akismet_api_comment_check($comment_obj);
+      if (_akismet_api_comment_check($comment_obj)) {
+        // Unpublish the comment
+        db_query("UPDATE {comments} SET status = %d WHERE cid = %d", COMMENT_NOT_PUBLISHED, $cid);
 
-      // @TODO: What do we do if this is spam? Not sure, yet.
+        // Since users won't see their replies published, just show them a polite explanation on why.
+        drupal_set_message(t('Your comment has been queued for moderation by site administrators and will be published after approval.'));
 
-      if ($is_spam) {
-        // For now, we unpublish the comment and prefix the subject with [SPAM]
-        $subject = t('[SPAM] ') . $comment_obj->subject;
-        db_query("UPDATE {comments} SET status = %d, subject = '%s' WHERE cid = %d", COMMENT_NOT_PUBLISHED, $subject, $cid);
+        // Add an entry to the watchdog log.
+        watchdog('content', t('Possible spam in comment: %subject.', array('%subject' => theme('placeholder', $comment_obj->subject))), WATCHDOG_WARNING, l(t('approval queue'), 'admin/comment/list/approval'));
       }
     }
   }
