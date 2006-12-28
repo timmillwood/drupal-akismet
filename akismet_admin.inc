@@ -115,7 +115,7 @@ function _akismet_settings_form() {
   );
   $form['node_options']['akismet_check_nodetypes'] = array(
     '#type' => 'checkboxes', '#title' => t('Check for spam in these node types'),
-    '#options' => node_get_types(),
+    '#options' => node_get_types('names'),
     '#default_value' => variable_get('akismet_check_nodetypes', NULL),
     '#description' => t('Use this option to <em>enable</em> or <em>disable</em> spam check for nodes of types specified here. When this option is enabled, a request will be sent to the <a href="%akismet">Akismet Service</a>, in real time. If the <a href="%akismet">Akismet Service</a> was down, nodes would simply be queued for manual moderation. Users with <a href="%admin-access">%admin-nodes</a> permission and <a href="%admin-access">spam moderators</a> are exempt from this check.',
       array(
@@ -149,7 +149,7 @@ function _akismet_settings_form() {
       ))
   );
 
-  if (module_exist('comment')) {
+  if (module_exists('comment')) {
     $form['comment_options'] = array(
       '#type' => 'fieldset', '#title' => t('Comment Options'),
       '#collapsible' => TRUE, '#collapsed' => TRUE
@@ -253,7 +253,7 @@ function _akismet_settings_form() {
     '#description' => t('These rules will be applied before sending any request to the <a href="%akismet">Akismet Service</a>. If a request to send content matches any of these rules, the actions defined below will be triggered. Requests to send content are checked against spam that is stored locally (visible from the <a href="%moderation-queue">moderation queue</a>).',
       array(
         '%akismet' => 'http://akismet.com',
-        '%moderation-queue' => url('admin/akismet')
+        '%moderation-queue' => url('admin/content/akismet')
       ))
   );
   $anti_spambot_actions = array(
@@ -273,7 +273,7 @@ function _akismet_settings_form() {
       ))
   );
 
-  return $form;
+  return system_settings_form($form);
 }
 
 /**
@@ -390,7 +390,6 @@ function akismet_callback_queue($mode = '', $submode = '') {
     drupal_not_found();
     return;
   }
-
   // Compute exactly what the current user is allowed to moderate.
   $moderator_types = akismet_get_moderator_types();
   $moderator_types_count = count($moderator_types);
@@ -421,6 +420,8 @@ function akismet_callback_queue($mode = '', $submode = '') {
       'unpublished' => 'n.status = 0',
       'published' => 'n.status = 1'
     );
+    $
+    
     $sql_nodes_stmt = 'SELECT n.*, u.name, IFNULL(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON n.uid = u.uid '. $sql_where;
     $sql_nodes_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
@@ -436,6 +437,15 @@ function akismet_callback_queue($mode = '', $submode = '') {
     $sql_comments_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
 
+  $sql = array(
+    'sql_comments_cnt' => $sql_comments_cnt,
+    'sql_comments_stmt' => $sql_comments_stmt,
+    'sql_comments_cond' => $sql_comments_cond,
+    'sql_nodes_cnt' => $sql_nodes_cnt,
+    'sql_nodes_stmt' => $sql_nodes_stmt,
+    'sql_nodes_cond' => $sql_nodes_cond,
+  );
+
   // Present the overview page (default).
   if ($mode == 'overview') {
     $items = array();
@@ -444,7 +454,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       foreach ($valid_submodes as $key => $title) {
         $sql_cnt = str_replace('%cond', $sql_nodes_cond[$key], $sql_nodes_cnt);
         $count = db_result(db_query(db_rewrite_sql($sql_cnt)));
-        $path = 'admin/akismet/nodes'. ($key == 'spam' ? '' : '/'. $key);
+        $path = 'admin/content/akismet/nodes'. ($key == 'spam' ? '' : '/'. $key);
         $label = ($count > 0 ? l($title, $path) : $title);
         $subitems[] = '<p><strong>'. $label .': '. $count .'</strong></p>';
       }
@@ -455,7 +465,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       foreach ($valid_submodes as $key => $title) {
         $sql_cnt = str_replace('%cond', $sql_comments_cond[$key], $sql_comments_cnt);
         $count = db_result(db_query(db_rewrite_sql($sql_cnt)));
-        $path = 'admin/akismet/comments'. ($key == 'spam' ? '' : '/'. $key);
+        $path = 'admin/content/akismet/comments'. ($key == 'spam' ? '' : '/'. $key);
         $label = ($count > 0 ? l($title, $path) : $title);
         $subitems[] = '<p><strong>'. $label .': '. $count .'</strong></p>';
       }
@@ -463,19 +473,24 @@ function akismet_callback_queue($mode = '', $submode = '') {
     }
     return '<h3>'. t('Summary of content:') .'</h3>'. theme('item_list', $items);
   }
-
-  // Request confirmation for an already submitted operation?
-  $edit = (isset($_POST['edit']) ? $_POST['edit'] : array());
-  if (count($edit['items']) > 0) {
-    return akismet_confirm_multiple_operation();
+  if (isset($_POST) && count($_POST['items']) > 0) {
+    return drupal_get_form('akismet_confirm_multiple_operation');
   }
+  else {
+    return drupal_get_form('akismet_moderation_form', $mode, $submode, $sql);
+  }
+}
 
+function akismet_moderation_form($mode = '', $submode = '', $sql = array()) {
   // Build the moderation queue form.
   $form = array();
   $form['options'] = array(
     '#type' => 'fieldset', '#title' => t('Moderator actions'),
     '#prefix' => '<div class="container-inline">', '#suffix' => '</div>'
   );
+
+  extract($sql);
+
   $options = array('' => t('<select operation>'));
   foreach (akismet_moderator_operations($mode, $submode) as $key => $operation_info) {
     $options[$key] = $operation_info['title'];
@@ -487,7 +502,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
     $sql_stmt = str_replace('%cond', $sql_nodes_cond[$submode], $sql_nodes_stmt);
     $sql_cnt = str_replace('%cond', $sql_nodes_cond[$submode], $sql_nodes_cnt);
     $form['header'] = array('#type' => 'value', '#value' => array(
-      theme('akismet_check_all'),
+      theme('table_select_header_cell'),
       array('data' => t('Title'), 'field' => 'title'),
       array('data' => t('Type'), 'field' => 'type'),
       array('data' => t('Author'), 'field' => 'name'),
@@ -499,7 +514,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
     $sql_stmt = str_replace('%cond', $sql_comments_cond[$submode], $sql_comments_stmt);
     $sql_cnt = str_replace('%cond', $sql_comments_cond[$submode], $sql_comments_cnt);
     $form['header'] = array('#type' => 'value', '#value' => array(
-      theme('akismet_check_all'),
+      theme('table_select_header_cell'),
       array('data' => t('Subject'), 'field' => 'subject'),
       array('data' => t('Author'), 'field' => 'name'),
       array('data' => t('Status'), 'field' => 'status'),
@@ -515,7 +530,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
     if ($mode == 'nodes') {
       $items[$content->nid] = '';
       $form['title'][$content->nid] = array('#value' => l($content->title, 'node/'. $content->nid, array('title' => truncate_utf8($content->body, 128))) .' '. theme('mark', node_mark($content->nid, $content->changed)));
-      $form['type'][$content->nid] = array('#value' => node_get_name($content));
+      $form['type'][$content->nid] = array('#value' => node_get_types('name', $content));
       $form['author'][$content->nid] = array('#value' => theme('username', $content));
       $form['status'][$content->nid] = array('#value' => ($content->status ? t('published') : t('not published')));
       if ($content->spam_mark) {
@@ -540,45 +555,28 @@ function akismet_callback_queue($mode = '', $submode = '') {
   $form['submode'] = array('#type' => 'hidden', '#value' => $submode);
   $form['items'] = array('#type' => 'checkboxes', '#options' => $items);
   $form['pager'] = array('#value' => theme('pager', NULL, $records_per_page, 0));
-  return drupal_get_form('akismet_callback_queue', $form);
-}
-
-function theme_akismet_check_all() {
-  $title = check_plain(t('Click here to mark/unmark all items'));
-  $output = <<<EOT
-<input id="akismet-check-all" type="checkbox" onclick="akismet_check_all(this.form, this.checked)" title="{$title}" />
-<script type="text/javascript"><!--//--><![CDATA[//><!--
-function akismet_check_all(f, checked) {
-  for (var i=0; i < f.elements.length; i++) {
-    if (f.elements[i].type == 'checkbox') {
-      f.elements[i].checked = checked;
-    }
-  }
-}
-//--><!]]></script>
-EOT;
-  return $output;
+  return $form;
 }
 
 /**
  * Theme callback; render the moderation queue form.
  */
-function theme_akismet_callback_queue($form) {
+function theme_akismet_moderation_form($form) {
   $mode = $form['mode']['#value'];
   $submode = $form['submode']['#value'];
-  $output = form_render($form['options']);
+  $output = drupal_render($form['options']);
   $rows = array();
   if (isset($form['author']) && is_array($form['author'])) {
     foreach (element_children($form['author']) as $key) {
       $row = array();
-      $row[] = array('data' => form_render($form['items'][$key]), 'align' => 'center');
-      $row[] = form_render($form['title'][$key]);
+      $row[] = array('data' => drupal_render($form['items'][$key]), 'align' => 'center');
+      $row[] = drupal_render($form['title'][$key]);
       if ($mode == 'nodes') {
-        $row[] = form_render($form['type'][$key]);
+        $row[] = drupal_render($form['type'][$key]);
       }
-      $row[] = form_render($form['author'][$key]);
-      $row[] = form_render($form['status'][$key]);
-      $row[] = form_render($form['created'][$key]);
+      $row[] = drupal_render($form['author'][$key]);
+      $row[] = drupal_render($form['status'][$key]);
+      $row[] = drupal_render($form['created'][$key]);
       $rows[] = $row;
     }
   }
@@ -596,16 +594,16 @@ function theme_akismet_callback_queue($form) {
   }
   $output .= theme('table', $form['header']['#value'], $rows);
   if ($form['pager']['#value']) {
-    $output .= form_render($form['pager']);
+    $output .= drupal_render($form['pager']);
   }
-  $output .= form_render($form);
+  $output .= drupal_render($form);
   return $output;
 }
 
 /**
  * Form API callback; Validate the moderation queue form.
  */
-function akismet_callback_queue_validate($form_id, $edit) {
+function akismet_moderation_form_validate($form_id, $edit) {
   $mode = $edit['mode'];
   $submode = $edit['submode'];
   $operation = $edit['operation'];
@@ -629,7 +627,7 @@ function akismet_callback_queue_validate($form_id, $edit) {
  * List the selected items and verify that the admin really wants to delete them.
  */
 function akismet_confirm_multiple_operation() {
-  $edit = $_POST['edit'];
+  $edit = $_POST;
   $mode = $edit['mode'];
   $submode = $edit['submode'];
   $operation = $edit['operation'];
@@ -661,11 +659,11 @@ function akismet_confirm_multiple_operation() {
   // Redirect to a non-existent menu item to make tabs disappear.
   menu_set_active_item('');
 
-  $path = 'admin/akismet/'. $mode;
+  $path = 'admin/content/akismet/'. $mode;
   if ($submode != 'spam') {
     $path .= '/'. $submode;
   }
-  return confirm_form('akismet_confirm_multiple_operation', $form, $confirm_message, $path, $confirm_warning, $confirm_button, t('Cancel'));
+  return confirm_form($form, $confirm_message, $path, $confirm_warning, $confirm_button, t('Cancel'));
 }
 
 /**
@@ -679,7 +677,7 @@ function akismet_confirm_multiple_operation_submit($form_id, $edit) {
 
   // Make sure we deal with a valid combination of mode, submode and operation.
   if (!isset($valid_operations[$operation])) {
-    return 'admin/akismet';
+    return 'admin/content/akismet';
   }
 
   if ($edit['confirm']) {
@@ -718,7 +716,7 @@ function akismet_confirm_multiple_operation_submit($form_id, $edit) {
     drupal_set_message($message);
   }
 
-  $path = 'admin/akismet/'. $mode;
+  $path = 'admin/content/akismet/'. $mode;
   if ($submode != 'spam') {
     $path .= '/'. $submode;
   }

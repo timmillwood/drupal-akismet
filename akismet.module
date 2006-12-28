@@ -4,10 +4,10 @@
 /**
  * Akismet Drupal and Module versions.
  */
-define('AKISMET_DRUPAL_VERSION', '4.7');
-define('AKISMET_MODULE_VERSION', '1.1.2');
-define('AKISMET_MODULE_HOMEURL', 'http://www.phpmix.org/projects/drupal/4_7/akismet');
-define('AKISMET_MODULE_USERAGENT', 'phpMiX.org | projects/drupal/4_7/akismet | '. AKISMET_MODULE_VERSION);
+define('AKISMET_DRUPAL_VERSION', '5');
+define('AKISMET_MODULE_VERSION', '1.2');
+define('AKISMET_MODULE_HOMEURL', 'http://www.phpmix.org/projects/drupal/5/akismet');
+define('AKISMET_MODULE_USERAGENT', 'phpMiX.org | projects/drupal/5/akismet | '. AKISMET_MODULE_VERSION);
 
 
 /**
@@ -29,9 +29,6 @@ define('AKISMET_API_RESULT_IS_HAM', 2);
 function akismet_help($section) {
   $output = '';
   switch ($section) {
-    case 'admin/modules#description':
-      $output = t('Use <a href="%akismet">Akismet Service</a> to protect your site from being spammed.', array('%akismet' => 'http://akismet.com'));
-      break;
     case 'admin/help#akismet':
       $output = t('<p>In order to use the <a href="%akismet">Akismet Service</a>, you need a <a href="%wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="%wordpress-com">wordpress.com</a>. Please, consult the <a href="%akismet-faq">Akismet FAQ</a> for further information.</p>
 <p>The <em>akismet module</em> may automatically check for spam posted in content (nodes and/or comments) by any user, except node or comment administrators respectively. It is also possible, from the <a href="%access-control">access control</a> panel, to grant <em>%no-check-perm</em> permission to <em>user roles</em> of your choice.</p>
@@ -59,19 +56,16 @@ function akismet_help($section) {
         if ($section == 'admin/settings/akismet') {
           $output .= _akismet_get_version_message($section);
         }
-    case 'admin/akismet':
+    case 'admin/settings/akismet':
       $output .= t('<p>Akismet has caught <strong>%count spam</strong> for you since <strong>%since</strong>.</p>', array('%count' => akismet_get_spam_counter(), '%since' => akismet_get_counting_since()));
-      if ($section == 'admin/settings/akismet') {
-        $output .= theme('more_help_link', url('admin/help/akismet'));
-      }
       break;
     default:
-      if (arg(0) == 'admin' && arg(1) == 'akismet' && !isset($_POST['edit'])) {
-        if (arg(2) == 'nodes') {
-          if (arg(3) == 'unpublished') {
+      if (arg(0) == 'admin' && arg(1) == 'content '&& arg(2) == 'akismet' && !isset($_POST)) {
+        if (arg(3) == 'nodes') {
+          if (arg(4) == 'unpublished') {
             $output = t('Below is the list of <strong>unpublished nodes</strong> awaiting for moderation.');
           }
-          else if (arg(3) == 'published') {
+          else if (arg(4) == 'published') {
             $output = t('Below is the list of <strong>published nodes</strong>.');
           }
           else { // spam
@@ -79,11 +73,11 @@ function akismet_help($section) {
           }
           $output .= ' '. t('Click on the titles to see the content of the nodes or the author\'s name to view the author\'s user information. You may also wish to click on the headers to order the nodes upon your needs.');
         }
-        else if (arg(2) == 'comments') {
-          if (arg(3) == 'unpublished') {
+        else if (arg(3) == 'comments') {
+          if (arg(4) == 'unpublished') {
             $output = t('Below is the list of <strong>unpublished comments</strong> awaiting for moderation.');
           }
-          else if (arg(3) == 'published') {
+          else if (arg(4) == 'published') {
             $output = t('Below is the list of <strong>published comments</strong>.');
           }
           else { // spam
@@ -104,8 +98,8 @@ function akismet_help($section) {
  * Implementation of hook_perm().
  */
 function akismet_perm() {
-  $perms = array();
-
+  $perms = array('administer akismet settings');
+  
   foreach (node_get_types() as $type => $name) {
     $perms[] = 'moderate spam in nodes of type '. $name;
   }
@@ -142,32 +136,54 @@ function akismet_menu($may_cache) {
     // so it should be safe to cache this menu items here.
     // Users will only see this menu if they actually can
     // moderate, at least, one content type.
+    $items[] = array('path' => 'admin/settings/akismet',
+      'title' => t('Akismet'), 'description' => t('Use the Akismet Service to protect your site from spam.'),
+      'callback' => 'drupal_get_form', 'callback arguments' => array('akismet_settings'),
+      'access' => user_access('administer akismet settings'));
+
     $moderator_types = akismet_get_moderator_types();
     $moderator_types_count = count($moderator_types);
     if ($moderator_types_count > 0) {
-      $items[] = array('path' => 'admin/akismet', 'title' => t('akismet moderation queue'),
+      $items[] = array('path' => 'admin/content/akismet', 'title' => t('Akismet moderation queue'),
+        'description' => t('Manage the Akismet spam queue, appropving or deleting content in need of moderation.'),
         'callback' => 'akismet_callback_queue',
         'access' => ($moderator_types_count > 0 ? TRUE : FALSE));
-      $items[] = array('path' => 'admin/akismet/overview', 'title' => t('overview'),
+      $items[] = array('path' => 'admin/content/akismet/overview', 'title' => t('Overview'),
         'type' => MENU_DEFAULT_LOCAL_TASK, 'weight' => 0);
       if (!isset($moderator_types['comments']) || $moderator_types_count > 1) {
-        $items[] = array('path' => 'admin/akismet/nodes', 'title' => t('nodes'),
+        $items[] = array('path' => 'admin/content/akismet/nodes', 'title' => t('Nodes'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('nodes'),
           'type' => MENU_LOCAL_TASK, 'weight' => 1);
-        $items[] = array('path' => 'admin/akismet/nodes/spam', 'title' => t('spam'),
+        $items[] = array('path' => 'admin/content/akismet/nodes/spam', 'title' => t('Spam'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('nodes'),
           'type' => MENU_DEFAULT_LOCAL_TASK, 'weight' => 0);
-        $items[] = array('path' => 'admin/akismet/nodes/unpublished', 'title' => t('unpublished nodes'),
+        $items[] = array('path' => 'admin/content/akismet/nodes/unpublished', 'title' => t('Unpublished nodes'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('nodes', 'unpublished'),
           'type' => MENU_LOCAL_TASK, 'weight' => 1);
-        $items[] = array('path' => 'admin/akismet/nodes/published', 'title' => t('published nodes'),
+        $items[] = array('path' => 'admin/content/akismet/nodes/published', 'title' => t('Published nodes'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('nodes', 'published'),
           'type' => MENU_LOCAL_TASK, 'weight' => 2);
       }
       if (isset($moderator_types['comments'])) {
-        $items[] = array('path' => 'admin/akismet/comments', 'title' => t('comments'),
+        $items[] = array('path' => 'admin/content/akismet/comments', 'title' => t('Comments'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('comments'),
           'type' => MENU_LOCAL_TASK, 'weight' => 2);
-        $items[] = array('path' => 'admin/akismet/comments/spam', 'title' => t('spam'),
+        $items[] = array('path' => 'admin/content/akismet/comments/spam', 'title' => t('Spam'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('comments'),
           'type' => MENU_DEFAULT_LOCAL_TASK, 'weight' => 0);
-        $items[] = array('path' => 'admin/akismet/comments/unpublished', 'title' => t('unpublished comments'),
+        $items[] = array('path' => 'admin/content/akismet/comments/unpublished', 'title' => t('Unpublished comments'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('comments', 'unpublished'),
           'type' => MENU_LOCAL_TASK, 'weight' => 1);
-        $items[] = array('path' => 'admin/akismet/comments/published', 'title' => t('published comments'),
+        $items[] = array('path' => 'admin/content/akismet/comments/published', 'title' => t('Published comments'),
+          'callback' => 'akismet_callback_queue',
+          'callback arguments' => array('comments', 'published'),
           'type' => MENU_LOCAL_TASK, 'weight' => 2);
       }
     }
@@ -176,7 +192,7 @@ function akismet_menu($may_cache) {
     // Paths may look like 'akismet/content_type/content_id/operation'
     if (arg(0) == 'akismet' && is_numeric(arg(2))) {
       $content_type = arg(1);
-      if ($content_type == 'node' || ($content_type == 'comment' && module_exist('comment'))) {
+      if ($content_type == 'node' || ($content_type == 'comment' && module_exists('comment'))) {
         $op = arg(3);
         if ($op == 'publish' || $op == 'unpublish') {
           $callback = 'akismet_callback_set_published_status';
@@ -197,7 +213,7 @@ function akismet_menu($may_cache) {
     }
     else {
       // Load the administration specific code?
-      if (arg(0) == 'admin' && arg(1) == 'akismet') {
+      if (arg(0) == 'admin' && arg(1) == 'content' && arg(2) == 'akismet') {
         require_once('./'. drupal_get_path('module', 'akismet') . '/akismet_admin.inc');
       }
     }
@@ -214,36 +230,36 @@ function akismet_link($type, $content = 0, $main = 0) {
   if ($type == 'node' && akismet_is_spam_moderator($content->type)) {
     if (variable_get('akismet_node_publish_links', 0)) {
       if ($content->status) {
-        $links[] = l(t('unpublish'), 'akismet/node/'. $content->nid .'/unpublish');
+        $links[] = array('title' => t('unpublish'), 'href' => 'akismet/node/'. $content->nid .'/unpublish');
       }
       else {
-        $links[] = l(t('publish'), 'akismet/node/'. $content->nid .'/publish');
+        $links[] = array('title' => t('publish'), 'href' => 'akismet/node/'. $content->nid .'/publish');
       }
     }
     if (variable_get('akismet_node_spam_links', 0)) {
       if (akismet_content_is_spam('node', $content->nid)) {
-        $links[] = l((variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'akismet/node/'. $content->nid .'/submit-ham');
+        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'href' => 'akismet/node/'. $content->nid .'/submit-ham');
       }
       else {
-        $links[] = l((variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'akismet/node/'. $content->nid .'/submit-spam');
+        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'href' => 'akismet/node/'. $content->nid .'/submit-spam');
       }
     }
   }
   else if ($type == 'comment' && akismet_is_spam_moderator('comments')) {
     if (variable_get('akismet_comment_publish_links', 1)) {
       if ($content->status == COMMENT_PUBLISHED) {
-        $links[] = l(t('unpublish'), 'akismet/comment/'. $content->cid .'/unpublish');
+        $links[] = array('title' => t('unpublish'), 'href' => 'akismet/comment/'. $content->cid .'/unpublish');
       }
       else if ($content->status == COMMENT_NOT_PUBLISHED) {
-        $links[] = l(t('publish'), 'akismet/comment/'. $content->cid .'/publish');
+        $links[] = array('title' => t('publish'), 'href' => 'akismet/comment/'. $content->cid .'/publish');
       }
     }
     if (variable_get('akismet_comment_spam_links', 1)) {
       if (akismet_content_is_spam('comment', $content->cid)) {
-        $links[] = l((variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'akismet/comment/'. $content->cid .'/submit-ham');
+        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'href' => 'akismet/comment/'. $content->cid .'/submit-ham');
       }
       else {
-        $links[] = l((variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'akismet/comment/'. $content->cid .'/submit-spam');
+        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'href' => 'akismet/comment/'. $content->cid .'/submit-spam');
       }
     }
   }
