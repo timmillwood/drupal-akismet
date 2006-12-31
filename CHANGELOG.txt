@@ -1,10 +1,10 @@
 $Id$
 **********************************************************************
 
-Akismet module in CVS
-------------------------------------------------
-- No changes yet.
-
+Akismet module v1.2 for Drupal 5, 2006-12-31
+--------------------------------------------
+- Upgrade for Drupal 5
+- Removed auto version-checking
 
 Akismet module v1.1.2 for Drupal 4.7, 2006-06-20
 ------------------------------------------------

@@ -7,9 +7,6 @@
 function akismet_cron_shutdown() {
   watchdog('cron', t('Akismet cron started at %time.', array('%time' => format_date(time(), 'custom', 'H:i:s'))));
 
-  // Update version information, if requested to.
-  _akismet_check_version();
-
   // Expired content spam that we have to remove from each content repository.
   $expired_content_spam = array('nids'=>array(), 'cids'=>array());
   // Spam marks that we have to remove from the 'spam marks' table.

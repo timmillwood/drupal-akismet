@@ -6,8 +6,8 @@
  */
 define('AKISMET_DRUPAL_VERSION', '5');
 define('AKISMET_MODULE_VERSION', '1.2');
-define('AKISMET_MODULE_HOMEURL', 'http://www.phpmix.org/projects/drupal/5/akismet');
-define('AKISMET_MODULE_USERAGENT', 'phpMiX.org | projects/drupal/5/akismet | '. AKISMET_MODULE_VERSION);
+define('AKISMET_MODULE_HOMEURL', 'http://www.drupal.org/project/akismet');
+define('AKISMET_MODULE_USERAGENT', 'Drupal/'. AKISMET_DRUPAL_VERSION .' | akismet.module/'. AKISMET_MODULE_VERSION);
 
 
 /**
@@ -47,17 +47,13 @@ function akismet_help($section) {
       break;
     case 'admin/help/akismet':
     case 'admin/settings/akismet':
-      $output = t('<p>The <a href="%akismet-module-home">akismet module</a> for <a href="%drupal">Drupal</a> allows you to use the <a href="%akismet">Akismet Service</a> to protect your site from being spammed.</p>',
+      $output = t('<p>The <a href="@akismet-module-home">akismet module</a> for <a href="@drupal">Drupal</a> allows you to use the <a href="@akismet">Akismet Service</a> to protect your site from being spammed.</p>',
         array(
-          '%akismet-module-home' => AKISMET_MODULE_HOMEURL,
-          '%drupal' => 'http://drupal.org',
-          '%akismet' => 'http://akismet.com'
+          '@akismet-module-home' => AKISMET_MODULE_HOMEURL,
+          '@drupal' => 'http://drupal.org',
+          '@akismet' => 'http://akismet.com'
         ));
-        if ($section == 'admin/settings/akismet') {
-          $output .= _akismet_get_version_message($section);
-        }
-    case 'admin/settings/akismet':
-      $output .= t('<p>Akismet has caught <strong>%count spam</strong> for you since <strong>%since</strong>.</p>', array('%count' => akismet_get_spam_counter(), '%since' => akismet_get_counting_since()));
+      $output .= t('<p>Akismet has caught <strong>@count spam</strong> for you since %since.</p>', array('@count' => akismet_get_spam_counter(), '%since' => akismet_get_counting_since()));
       break;
     default:
       if (arg(0) == 'admin' && arg(1) == 'content '&& arg(2) == 'akismet' && !isset($_POST)) {
@@ -957,10 +953,12 @@ EOT
   $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
   $headers = "From: $site_mail\nReply-to: $site_mail\nX-Mailer: Drupal\nReturn-path: $site_mail\nErrors-to: $site_mail";
   foreach ($unique_emails as $email_to => $uid) {
-    user_mail(
+    drupal_mail(
+      'akismet_moderator_notification',
       $email_to,
       $message_title,
       str_replace('%user-name', check_plain($moderators[$uid]['name']), $message_body),
+      variable_get('site_mail', ''),
       $headers
     );
   }
@@ -1430,82 +1428,6 @@ function akismet_prepare_comment_data($content_type, $content) {
   return $comment_data;
 }
 
-/************************************************************\
-  phpMiX Version Checker
-\************************************************************/
-
-/**
- * Check module version.
- *
- * @param boolean FALSE will return a cached value (if exists); otherwise it will perform a real time connection.
- * @return string The latest released module version,
- *                NFND if the server reports "Module Not Found" (something that shouldn't happen) or
- *                an empty string if connection fails (reason logged to watchdog).
- */
-function _akismet_check_version($refresh = FALSE) {
-  global $base_url;
-  $version_string = variable_get('akismet_version_string', FALSE);
-  $timestamp_now = time();
-  if (!$version_string) {
-    $refresh = TRUE;
-  }
-  else {
-    $timestamp_age = variable_get('akismet_version_check_age', 604800);
-    if ($timestamp_age > 0) {
-      $timestamp_last = variable_get('akismet_version_check_timestamp', 0);
-      if (($timestamp_last + $timestamp_age) < $timestamp_now) {
-        $refresh = TRUE;
-      }
-    }
-  }
-  if ($refresh) {
-    $version_url = AKISMET_MODULE_HOMEURL .'/version';
-    $result = drupal_http_request($version_url, array('User-Agent' => AKISMET_MODULE_USERAGENT, 'Referer' => $base_url . base_path()));
-    if (!isset($result->code) || !in_array($result->code, array(200,302,307)) || empty($result->data)) {
-      watchdog('version check', t('Could not check version of akismet module, due to "%error".', array('%error' => $result->code .' '. $result->error)), WATCHDOG_ERROR, l(t('check'), $version_url, array('target'=>'_blank'), NULL, NULL, TRUE));
-      return '';
-    }
-    $new_version = trim($result->data);
-    if (AKISMET_MODULE_VERSION != $new_version) {
-      watchdog('version check', t('New version of akismet module seems to be available. Your currently installed version is %your-version. The latest available version is %new-version.', array('%your-version' => AKISMET_MODULE_VERSION, '%new-version' => $new_version)), WATCHDOG_WARNING, l(t('module home'), AKISMET_MODULE_HOMEURL, array('target'=>'_blank'), NULL, NULL, TRUE));
-    }
-    else {
-      watchdog('version check', t('Your version of akismet module is up to date.'), WATCHDOG_WARNING, l(t('module home'), AKISMET_MODULE_HOMEURL, array('target'=>'_blank'), NULL, NULL, TRUE));
-    }
-    $version_string = $new_version;
-    variable_set('akismet_version_string', $version_string);
-    variable_set('akismet_version_check_timestamp', $timestamp_now);
-  }
-  return $version_string;
-}
-
-/**
- * Get version information message.
- *
- * @param string URL of the current page.
- * @return string
- */
-function _akismet_get_version_message($url) {
-  $new_version = _akismet_check_version(isset($_GET['vchk']) ? TRUE : FALSE);
-  if (empty($new_version)) {
-    drupal_set_message(t('Sorry, could not connect to remote server to check for new version information. Please, consult the <a href="@admin-logs">log</a> for details.', array('@admin-logs' => url('admin/logs'))), 'error');
-  }
-  else {
-    if (isset($_GET['vchk'])) {
-      drupal_goto($url);
-    }
-    if ($new_version != AKISMET_MODULE_VERSION) {
-      drupal_set_message(t('Your installation does <strong>not</strong> seem to be up to date. Updates are available, please visit the <a href="@module-url" target="_blank">Akismet module home</a> to obtain the latest version. The latest available version is %new-version. ', array('@module-url' => AKISMET_MODULE_HOMEURL, '%new-version' => $new_version)), 'error');
-    }
-  }
-  $timestamp_last = variable_get('akismet_version_check_timestamp', 0);
-  $output = '<p>'
-    .t('You are running version %your-version', array('%your-version' => AKISMET_MODULE_VERSION))
-    .($timestamp_last > 0 ? ', '. t('version checked %time ago', array('%time' => format_interval(time() - $timestamp_last))) : '')
-    .'. '. t('<a href="%check">Check for newest version</a>.', array('%check' => url($url, 'vchk=1')))
-    .'</p>';
-  return $output;
-}
 
 /************************************************************\
   Akismet API implementation
