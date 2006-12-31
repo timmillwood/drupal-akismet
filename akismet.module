@@ -100,7 +100,7 @@ function akismet_help($section) {
 function akismet_perm() {
   $perms = array('administer akismet settings');
   
-  foreach (node_get_types() as $type => $name) {
+  foreach (node_get_types('names') as $type => $name) {
     $perms[] = 'moderate spam in nodes of type '. $name;
   }
   $perms[] = 'moderate spam in comments';
@@ -402,10 +402,10 @@ function akismet_nodeapi(&$node, $op, $teaser, $page) {
 
         // Record the event to watchdog.
         if ($akismet_api_result == AKISMET_API_RESULT_ERROR) {
-          watchdog('content', t('Akismet service seems to be down, %content-type-name queued for manual approval: %title', array('%content-type-name' => $content_type_name, '%title' => theme('placeholder', $node->title))), WATCHDOG_WARNING, l(t('view'), 'node/'. $node->nid));
+          watchdog('content', t('Akismet service seems to be down, %content-type-name queued for manual approval: %title', array('%content-type-name' => $content_type_name, '%title' => $node->title)), WATCHDOG_WARNING, l(t('view'), 'node/'. $node->nid));
         }
         else {
-          watchdog('content', t('Spam detected by Akismet in %content-type-name: %title', array('%content-type-name' => $content_type_name, '%title' => theme('placeholder', $node->title))), WATCHDOG_WARNING, l(t('view'), 'node/'. $node->nid));
+          watchdog('content', t('Spam detected by Akismet in %content-type-name: %title', array('%content-type-name' => $content_type_name, '%title' => $node->title)), WATCHDOG_WARNING, l(t('view'), 'node/'. $node->nid));
           // If requested to, generate a delay so the spammer has to wait for a while.
           if (($seconds = variable_get('akismet_antispambot_delay', 60)) > 0) {
             sleep($seconds);
@@ -571,7 +571,7 @@ function _akismet_comment_form_validate($form_id, $form_values) {
 /**
  * Comment form submit callback; check for spam.
  */
-function _akismet_comment_form_submit($form_id, $form_values, $original_submit_callback = NULL) {
+function _akismet_comment_form_submit($form_id, $form_values, $original_submit_callback = NULL) {  
   // Our default destination. It doesn't need to override the original.
   $goto = NULL;
 
@@ -797,7 +797,7 @@ function akismet_get_moderator_types($account = NULL) {
   }
 
   if ($node_types === FALSE) {
-    $node_types = node_get_types();
+    $node_types = node_get_types('names');
   }
 
   if (!isset($moderator_types[$account->uid])) {
@@ -913,21 +913,21 @@ function akismet_notify_moderators($content_type, $content, $is_published, $is_s
       return;
     }
     $message_args = array(
-      '%title-label' => t('Subject'),
+      '@title-label' => t('Subject'),
       '%content-title' => check_plain($content->subject),
       '%content-type' => t('comment'),
       '%content-link' => url('node/'. $content->nid, NULL, 'comment-'. $content->cid, TRUE)
     );
-    $message_title = t('[%site-name] moderator notification - Posted comment on \'%title\'', array('%site-name' => $site_name, '%title' => check_plain($node->title)));
+    $message_title = t('[%site-name] moderator notification - Posted comment on \'@title\'', array('%site-name' => $site_name, '@title' => check_plain($node->title)));
   }
   else {
     $message_args = array(
-      '%title-label' => t('Title'),
+      '@title-label' => t('Title'),
       '%content-title' => check_plain($content->title),
       '%content-type' => check_plain($moderator_types[$content->type]),
       '%content-link' => url('node/'. $content->nid, NULL, NULL, TRUE)
     );
-    $message_title = t('[%site-name] moderator notification - Posted %type \'%title\'', array('%site-name' => $site_name, '%type' => check_plain($moderator_types[$content->type]), '%title' => check_plain($content->title)));
+    $message_title = t('[%site-name] moderator notification - Posted %type \'@title\'', array('%site-name' => $site_name, '%type' => check_plain($moderator_types[$content->type]), '@title' => check_plain($content->title)));
   }
   $message_args['%content-status'] = ($is_published ? t('published') : t('published')) . ($is_spam ? ' ('. t('marked as spam') .')' : '');
   $message_args['%site-name'] = check_plain($site_name);
@@ -938,7 +938,7 @@ Hello %user-name,
 
 You can use the following information to review this %content-type:
 
-%title-label: %content-title
+@title-label: %content-title
 URL: %content-link
 Status: %content-status
 
@@ -1260,7 +1260,7 @@ function akismet_content_delete($content_type, $content_id) {
       }
 
       // Record the event to watchdog.
-      watchdog('content', t('%type: deleted %title.', array('%type' => theme('placeholder', t($node->type)), '%title' => theme('placeholder', $node->title))));
+      watchdog('content', t('%type: deleted @title.', array('%type' => theme('placeholder', t($node->type)), '@title' => theme('placeholder', $node->title))));
       return TRUE;
     }
   }
@@ -1337,7 +1337,7 @@ function akismet_content_spam_operation($content_type, $content, $op, $log_actio
   }
 
   if ($log_action) {
-    watchdog('content', t('%action: %title', array('%action' => $action, '%title' => theme('placeholder', $content_title))), WATCHDOG_NOTICE, $content_link);
+    watchdog('content', t('@action: @title', array('@action' => $action, '@title' => theme('placeholder', $content_title))), WATCHDOG_NOTICE, $content_link);
   }
   akismet_clear_cache();
 }
@@ -1360,7 +1360,7 @@ function akismet_content_publish_operation($content_type, $content, $op, $log_ac
 
     if ($log_action) {
       $action = ($op == 'publish' ? t('Content published') : t('Content unpublished'));
-      watchdog('content', t('%action: %title', array('%action' => $action, '%title' => theme('placeholder', $content->title))), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid));
+      watchdog('content', t('@action: @title', array('@action' => $action, '@title' => theme('placeholder', $content->title))), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid));
     }
   }
   else { // comment
@@ -1384,7 +1384,7 @@ function akismet_content_publish_operation($content_type, $content, $op, $log_ac
 
     if ($log_action) {
       $action = ($op == 'publish' ? t('Comment published') : t('Comment unpublished'));
-      watchdog('content', t('%action: %subject', array('%action' => $action, '%subject' => theme('placeholder', $content->subject))), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid, NULL, NULL, 'comment-'. $content->cid));
+      watchdog('content', t('@action: %subject', array('@action' => $action, '%subject' => theme('placeholder', $content->subject))), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid, NULL, NULL, 'comment-'. $content->cid));
     }
   }
 
@@ -1462,12 +1462,12 @@ function _akismet_check_version($refresh = FALSE) {
     $version_url = AKISMET_MODULE_HOMEURL .'/version';
     $result = drupal_http_request($version_url, array('User-Agent' => AKISMET_MODULE_USERAGENT, 'Referer' => $base_url . base_path()));
     if (!isset($result->code) || !in_array($result->code, array(200,302,307)) || empty($result->data)) {
-      watchdog('version check', t('Could not check version of akismet module, due to "%error".', array('%error' => theme('placeholder', $result->code .' '. $result->error))), WATCHDOG_ERROR, l(t('check'), $version_url, array('target'=>'_blank'), NULL, NULL, TRUE));
+      watchdog('version check', t('Could not check version of akismet module, due to "%error".', array('%error' => $result->code .' '. $result->error)), WATCHDOG_ERROR, l(t('check'), $version_url, array('target'=>'_blank'), NULL, NULL, TRUE));
       return '';
     }
     $new_version = trim($result->data);
     if (AKISMET_MODULE_VERSION != $new_version) {
-      watchdog('version check', t('New version of akismet module seems to be available. Your currently installed version is <strong>%your-version</strong>. The latest available version is <strong>%new-version</strong>.', array('%your-version' => AKISMET_MODULE_VERSION, '%new-version' => $new_version)), WATCHDOG_WARNING, l(t('module home'), AKISMET_MODULE_HOMEURL, array('target'=>'_blank'), NULL, NULL, TRUE));
+      watchdog('version check', t('New version of akismet module seems to be available. Your currently installed version is %your-version. The latest available version is %new-version.', array('%your-version' => AKISMET_MODULE_VERSION, '%new-version' => $new_version)), WATCHDOG_WARNING, l(t('module home'), AKISMET_MODULE_HOMEURL, array('target'=>'_blank'), NULL, NULL, TRUE));
     }
     else {
       watchdog('version check', t('Your version of akismet module is up to date.'), WATCHDOG_WARNING, l(t('module home'), AKISMET_MODULE_HOMEURL, array('target'=>'_blank'), NULL, NULL, TRUE));
@@ -1488,19 +1488,19 @@ function _akismet_check_version($refresh = FALSE) {
 function _akismet_get_version_message($url) {
   $new_version = _akismet_check_version(isset($_GET['vchk']) ? TRUE : FALSE);
   if (empty($new_version)) {
-    drupal_set_message(t('Sorry, could not connect to remote server to check for new version information. Please, consult the <a href="%admin-logs">log</a> for details.', array('%admin-logs' => url('admin/logs'))), 'error');
+    drupal_set_message(t('Sorry, could not connect to remote server to check for new version information. Please, consult the <a href="@admin-logs">log</a> for details.', array('@admin-logs' => url('admin/logs'))), 'error');
   }
   else {
     if (isset($_GET['vchk'])) {
       drupal_goto($url);
     }
     if ($new_version != AKISMET_MODULE_VERSION) {
-      drupal_set_message(t('Your installation does <strong>not</strong> seem to be up to date. Updates are available, please visit the <a href="%module-url" target="_blank">Akismet module home</a> to obtain the latest version. The latest available version is <strong>%new-version</strong>. ', array('%module-url' => AKISMET_MODULE_HOMEURL, '%new-version' => $new_version)), 'error');
+      drupal_set_message(t('Your installation does <strong>not</strong> seem to be up to date. Updates are available, please visit the <a href="@module-url" target="_blank">Akismet module home</a> to obtain the latest version. The latest available version is %new-version. ', array('@module-url' => AKISMET_MODULE_HOMEURL, '%new-version' => $new_version)), 'error');
     }
   }
   $timestamp_last = variable_get('akismet_version_check_timestamp', 0);
   $output = '<p>'
-    .t('You are running version <strong>%your-version</strong>', array('%your-version' => AKISMET_MODULE_VERSION))
+    .t('You are running version %your-version', array('%your-version' => AKISMET_MODULE_VERSION))
     .($timestamp_last > 0 ? ', '. t('version checked %time ago', array('%time' => format_interval(time() - $timestamp_last))) : '')
     .'. '. t('<a href="%check">Check for newest version</a>.', array('%check' => url($url, 'vchk=1')))
     .'</p>';
