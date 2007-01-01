@@ -28,10 +28,10 @@ function _akismet_settings_form() {
     '#type' => 'textfield', '#title' => t('WordPress.com API key'),
     '#size' => 30, '#maxlength' => 60,
     '#default_value' => $akismet_wpapikey,
-    '#description' => t('Please, enter here your <a href="%wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="%wordpress-com">WordPress.com</a>. Note that this information is required in order to use the <a href="@akismet">Akismet Service</a>. Please, consult the <a href="@akismet-faq">Akismet FAQ</a> for further information.',
+    '#description' => t('Please, enter here your <a href="@wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="@wordpress-com">WordPress.com</a>. Note that this information is required in order to use the <a href="@akismet">Akismet Service</a>. Please, consult the <a href="@akismet-faq">Akismet FAQ</a> for further information.',
       array(
-        '%wpapikey' => 'http://wordpress.com/api-keys/',
-        '%wordpress-com' => 'http://wordpress.com',
+        '@wpapikey' => 'http://wordpress.com/api-keys/',
+        '@wordpress-com' => 'http://wordpress.com',
         '@akismet' => 'http://akismet.com',
         '@akismet-faq' => 'http://akismet.com/faq/'
       ))
@@ -43,10 +43,10 @@ function _akismet_settings_form() {
     '#type' => 'radios', '#title' => t('Akismet connections'),
     '#options' => $enable_options,
     '#default_value' => variable_get('akismet_connection_enabled', 1),
-    '#description' => t('<strong>This option must be enabled in order to perform real requests to the <a href="@akismet">Akismet Service</a>.</strong> You may want to disable this option for testing purposes, however. In this case, the <em>akismet module</em> will operate as normal, except sending real requests to the <a href="@akismet">Akismet Service</a>. ie. no automatic spam detection will be performed and no remote requests will be made when content is manually <em>marked</em>/<em>unmarked</em> as spam.<br />Note: regardless of this option, the <em>akismet module</em> will still connect, from this panel, to validate your <a href="%wpapikey">WordPress.com API key</a>, if specified.',
+    '#description' => t('<strong>This option must be enabled in order to perform real requests to the <a href="@akismet">Akismet Service</a>.</strong> You may want to disable this option for testing purposes, however. In this case, the <em>akismet module</em> will operate as normal, except sending real requests to the <a href="@akismet">Akismet Service</a>. ie. no automatic spam detection will be performed and no remote requests will be made when content is manually <em>marked</em>/<em>unmarked</em> as spam.<br />Note: regardless of this option, the <em>akismet module</em> will still connect, from this panel, to validate your <a href="@wpapikey">WordPress.com API key</a>, if specified.',
       array(
         '@akismet' => 'http://akismet.com',
-        '%wpapikey' => 'http://wordpress.com/api-keys/'
+        '@wpapikey' => 'http://wordpress.com/api-keys/'
       ))
   );
   $timeout_options = array();

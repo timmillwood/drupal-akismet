@@ -30,19 +30,19 @@ function akismet_help($section) {
   $output = '';
   switch ($section) {
     case 'admin/help#akismet':
-      $output = t('<p>In order to use the <a href="%akismet">Akismet Service</a>, you need a <a href="%wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="%wordpress-com">wordpress.com</a>. Please, consult the <a href="%akismet-faq">Akismet FAQ</a> for further information.</p>
-<p>The <em>akismet module</em> may automatically check for spam posted in content (nodes and/or comments) by any user, except node or comment administrators respectively. It is also possible, from the <a href="%access-control">access control</a> panel, to grant <em>%no-check-perm</em> permission to <em>user roles</em> of your choice.</p>
-<p>Content marked as <em>spam</em> is still saved into database so it can be reviewed by content administrators. There is <a href="%akismet-settings">an option</a> that allows you to specify how long this information will be kept in the database. <em>Spam</em> older than a specified age will be automatically removed. Requires crontab.</p>
+      $output = t('<p>In order to use the <a href="@akismet">Akismet Service</a>, you need a <a href="@wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="@wordpress-com">wordpress.com</a>. Please, consult the <a href="@akismet-faq">Akismet FAQ</a> for further information.</p>
+<p>The <em>akismet module</em> may automatically check for spam posted in content (nodes and/or comments) by any user, except node or comment administrators respectively. It is also possible, from the <a href="@access-control">access control</a> panel, to grant <em>@no-check-perm</em> permission to <em>user roles</em> of your choice.</p>
+<p>Content marked as <em>spam</em> is still saved into database so it can be reviewed by content administrators. There is <a href="@akismet-settings">an option</a> that allows you to specify how long this information will be kept in the database. <em>Spam</em> older than a specified age will be automatically removed. Requires crontab.</p>
 <p>Automatic spam detection can be enabled or disabled by content type and/or comments. In addition to this, the <em>akismet module</em> makes it easy for <em>content administrators</em> to manually <em>publish</em>/<em>unpublish</em> content and <em>mark</em>/<em>unmark</em> content as spam, from links available at the bottom of content.</p>
 <p></p>',
         array(
-          '%akismet' => 'http://akismet.com',
-          '%wpapikey' => 'http://wordpress.com/api-keys/',
-          '%wordpress-com' => 'http://wordpress.com',
-          '%akismet-faq' => 'http://akismet.com/faq/',
-          '%akismet-settings' => url('admin/settings/akismet'),
-          '%access-control' => url('admin/access'),
-          '%no-check-perm' => t('post with no akismet checking')
+          '@akismet' => 'http://akismet.com',
+          '@wpapikey' => 'http://wordpress.com/api-keys/',
+          '@wordpress-com' => 'http://wordpress.com',
+          '@akismet-faq' => 'http://akismet.com/faq/',
+          '@akismet-settings' => url('admin/settings/akismet'),
+          '@access-control' => url('admin/access'),
+          '@no-check-perm' => t('post with no akismet checking')
         ));
       break;
     case 'admin/help/akismet':
@@ -53,7 +53,7 @@ function akismet_help($section) {
           '@drupal' => 'http://drupal.org',
           '@akismet' => 'http://akismet.com'
         ));
-      $output .= t('<p>Akismet has caught <strong>@count spam</strong> for you since %since.</p>', array('@count' => akismet_get_spam_counter(), '%since' => akismet_get_counting_since()));
+      $output .= t('<p>Akismet has caught <strong>@count spam</strong> for you since @since.</p>', array('@count' => akismet_get_spam_counter(), '@since' => akismet_get_counting_since()));
       break;
     default:
       if (arg(0) == 'admin' && arg(1) == 'content '&& arg(2) == 'akismet' && !isset($_POST)) {
@@ -82,12 +82,34 @@ function akismet_help($section) {
           $output .= ' '. t('Click on the subjects to see the comments or the author\'s name to view the author\'s user information. You may also wish to click on the headers to order the comments upon your needs.');
         }
         if (!empty($output)) {
-          $output .= '<br />'. t('<strong>Note:</strong> To interact fully with the <a href="%akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use the submit <em>ham</em> operation rather than simply publishing content that was identified as spam (false positives). This is necessary in order to let Akismet learn from its mistakes. Thank you.', array('%akismet' => 'http://akismet.com'));
+          $output .= '<br />'. t('<strong>Note:</strong> To interact fully with the <a href="@akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use the submit <em>ham</em> operation rather than simply publishing content that was identified as spam (false positives). This is necessary in order to let Akismet learn from its mistakes. Thank you.', array('@akismet' => 'http://akismet.com'));
         }
       }
       break;
   }
   return $output;
+}
+
+// Check run-time requirements and status information
+function akismet_requirements($phase) {
+  $t = get_t();
+
+  if ($phase == 'runtime') {
+    if (variable_get('akismet_wpapikey', '') == '') {
+      $requirements['akismet_key'] = array(
+        'title' => $t('Akismet API key'),
+        'value' => $t('Not present'),
+        'description' => $t("Akismet spam protection requires a <a href='@wpapikey'>WordPress.com API key</a> to function. Obtain a key by signing up for a free account at <a href='@wordpress-com'>WordPress.com</a>, then enter the key on the <a href='@akismet-settings'>Akismet settings page</a>.",
+          array(
+            '@wpapikey' => 'http://wordpress.com/api-keys/',
+            '@wordpress-com' => 'http://wordpress.com',
+            '@akismet-settings' => url('admin/settings/akismet')
+          )),
+        'severity' => REQUIREMENT_ERROR,
+      );
+      return $requirements;
+    }
+  }
 }
 
 /**
@@ -1085,7 +1107,7 @@ function akismet_block($op = 'list', $delta = 0, $edit = array()) {
       $blocks_counter = variable_get('akismet_blocks_counter', 1);
       $blocks = array();
       for ($i = 0; $i < $blocks_counter; $i++) {
-        $blocks[] = array('info' => t('Akismet spam counter (block:%count)', array('%count' => ($i+1))));
+        $blocks[] = array('info' => t('Akismet spam counter (block:@count)', array('@count' => ($i+1))));
       }
       return $blocks;
 
@@ -1151,12 +1173,12 @@ function akismet_block($op = 'list', $delta = 0, $edit = array()) {
         $target = ($block_settings['newwin'] ? ' target="_blank"' : '');
         $block_args['text'] = array(
           'plain' => array(
-            'short' => check_plain(t('Proudly protected by Akismet, %count spam caught since %since.', array('%site_name' => variable_get('site_name', 'drupal'), '%count' => $block_args['counter'], '%since' => $block_args['since']))),
-            'long'  => check_plain(t('%site_name is proudly protected by Akismet, %count spam caught since %since.', array('%site_name' => variable_get('site_name', 'drupal'), '%count' => $block_args['counter'], '%since' => $block_args['since'])))
+            'short' => check_plain(t('Proudly protected by Akismet, @count spam caught since @since.', array('@site_name' => variable_get('site_name', 'drupal'), '@count' => $block_args['counter'], '@since' => $block_args['since']))),
+            'long'  => check_plain(t('@site_name is proudly protected by Akismet, @count spam caught since @since.', array('@site_name' => variable_get('site_name', 'drupal'), '@count' => $block_args['counter'], '@since' => $block_args['since'])))
           ),
           'html' => array(
-            'short' => t('Proudly protected by <a href="%akismet"%target>Akismet</a>, %count spam caught since %since', array('%site_name' => variable_get('site_name', 'drupal'), '%akismet' => 'http://akismet.com', '%target' => $target, '%count' => $block_args['counter'], '%since' => $block_args['since'])),
-            'long'  => t('%site_name is proudly protected by <a href="%akismet"%target>Akismet</a>, %count spam caught since %since', array('%site_name' => variable_get('site_name', 'drupal'), '%akismet' => 'http://akismet.com', '%target' => $target, '%count' => $block_args['counter'], '%since' => $block_args['since']))
+            'short' => t('Proudly protected by <a href="@akismet"@target>Akismet</a>, @count spam caught since @since', array('@site_name' => variable_get('site_name', 'drupal'), '@akismet' => 'http://akismet.com', '@target' => $target, '@count' => $block_args['counter'], '@since' => $block_args['since'])),
+            'long'  => t('@site_name is proudly protected by <a href="@akismet"@target>Akismet</a>, @count spam caught since @since', array('@site_name' => variable_get('site_name', 'drupal'), '@akismet' => 'http://akismet.com', '@target' => $target, '@count' => $block_args['counter'], '@since' => $block_args['since']))
           )
         );
         $text_version = ($block_settings['sitename'] ? 'long' : 'short');
