@@ -102,7 +102,7 @@ function akismet_requirements($phase) {
         'description' => $t("Akismet spam protection requires a <a href='!wpapikey'>WordPress.com API key</a> to function. Obtain a key by signing up for a free account at <a href='!wordpress-com'>WordPress.com</a>, then enter the key on the <a href='!akismet-settings'>Akismet settings page</a>.",
           array(
             '!wpapikey' => url('http://wordpress.com/api-keys/'),
-            '!wordpress-com' => url('http://wordpress.com',)
+            '!wordpress-com' => url('http://wordpress.com'),
             '!akismet-settings' => url('admin/settings/akismet'),
           )),
         'severity' => REQUIREMENT_ERROR,
@@ -1170,8 +1170,8 @@ function akismet_block($op = 'list', $delta = 0, $edit = array()) {
         $target = ($block_settings['newwin'] ? ' target="_blank"' : '');
         $block_args['text'] = array(
           'plain' => array(
-            'short' => check_plain(t('Proudly protected by Akismet, @count spam caught since @since.', array('@site_name' => variable_get('site_name', 'drupal'), '@count' => $block_args['counter'], '@since' => $block_args['since']))),
-            'long'  => check_plain(t('@site_name is proudly protected by Akismet, @count spam caught since @since.', array('@site_name' => variable_get('site_name', 'drupal'), '@count' => $block_args['counter'], '@since' => $block_args['since'])))
+            'short' => t('Proudly protected by Akismet, @count spam caught since @since.', array('@site_name' => variable_get('site_name', 'drupal'), '@count' => $block_args['counter'], '@since' => $block_args['since'])),
+            'long'  => t('@site_name is proudly protected by Akismet, @count spam caught since @since.', array('@site_name' => variable_get('site_name', 'drupal'), '@count' => $block_args['counter'], '@since' => $block_args['since'])),
           ),
           'html' => array(
             'short' => t('Proudly protected by <a href="@akismet"@target>Akismet</a>, @count spam caught since @since', array('@site_name' => variable_get('site_name', 'drupal'), '!akismet' => url('http://akismet.com'), '@target' => $target, '@count' => $block_args['counter'], '@since' => $block_args['since'])),
