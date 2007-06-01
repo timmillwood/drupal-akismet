@@ -28,12 +28,12 @@ function _akismet_settings_form() {
     '#type' => 'textfield', '#title' => t('WordPress.com API key'),
     '#size' => 30, '#maxlength' => 60,
     '#default_value' => $akismet_wpapikey,
-    '#description' => t('Please, enter here your <a href="@wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="@wordpress-com">WordPress.com</a>. Note that this information is required in order to use the <a href="@akismet">Akismet Service</a>. Please, consult the <a href="@akismet-faq">Akismet FAQ</a> for further information.',
+    '#description' => t('Please, enter here your <a href="!wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="!wordpress-com">WordPress.com</a>. Note that this information is required in order to use the <a href="!akismet">Akismet Service</a>. Please, consult the <a href="!akismet-faq">Akismet FAQ</a> for further information.',
       array(
-        '@wpapikey' => 'http://wordpress.com/api-keys/',
-        '@wordpress-com' => 'http://wordpress.com',
-        '@akismet' => 'http://akismet.com',
-        '@akismet-faq' => 'http://akismet.com/faq/'
+        '!wpapikey' => url('http://wordpress.com/api-keys/'),
+        '!wordpress-com' => url('http://wordpress.com'),
+        '!akismet' => url('http://akismet.com'),
+        '!akismet-faq' => url('http://akismet.com/faq/'),
       ))
   );
   if (!empty($akismet_wpapikey) && !$is_valid) {
@@ -43,10 +43,10 @@ function _akismet_settings_form() {
     '#type' => 'radios', '#title' => t('Akismet connections'),
     '#options' => $enable_options,
     '#default_value' => variable_get('akismet_connection_enabled', 1),
-    '#description' => t('<strong>This option must be enabled in order to perform real requests to the <a href="@akismet">Akismet Service</a>.</strong> You may want to disable this option for testing purposes, however. In this case, the <em>akismet module</em> will operate as normal, except sending real requests to the <a href="@akismet">Akismet Service</a>. ie. no automatic spam detection will be performed and no remote requests will be made when content is manually <em>marked</em>/<em>unmarked</em> as spam.<br />Note: regardless of this option, the <em>akismet module</em> will still connect, from this panel, to validate your <a href="@wpapikey">WordPress.com API key</a>, if specified.',
+    '#description' => t('<strong>This option must be enabled in order to perform real requests to the <a href="!akismet">Akismet Service</a>.</strong> You may want to disable this option for testing purposes, however. In this case, the <em>akismet module</em> will operate as normal, except sending real requests to the <a href="!akismet">Akismet Service</a>. ie. no automatic spam detection will be performed and no remote requests will be made when content is manually <em>marked</em>/<em>unmarked</em> as spam.<br />Note: regardless of this option, the <em>akismet module</em> will still connect, from this panel, to validate your <a href="!wpapikey">WordPress.com API key</a>, if specified.',
       array(
-        '@akismet' => 'http://akismet.com',
-        '@wpapikey' => 'http://wordpress.com/api-keys/'
+        '!akismet' => url('http://akismet.com'),
+        '!wpapikey' => url('http://wordpress.com/api-keys/'),
       ))
   );
   $timeout_options = array();
@@ -88,9 +88,9 @@ function _akismet_settings_form() {
     '#type' => 'select', '#title' => t('Number of blocks'),
     '#default_value' => variable_get('akismet_blocks_counter', 1),
     '#options' => array(0=>t('none'), 1=>1, 2=>2, 3=>3, 4=>4, 5=>5),
-    '#description' => t('The akismet module may generate a number of blocks for you to display the current spam counter anywhere on your site. The number of blocks is variable to help you keep your <a href="@admin-block">blocks administration panel</a> as clean as possible. This option allows you to specify how many blocks you wish to use. If you do not plan to show the spam counter to your visitors, set this option to <em>none</em>.',
+    '#description' => t('The akismet module may generate a number of blocks for you to display the current spam counter anywhere on your site. The number of blocks is variable to help you keep your <a href="!admin-block">blocks administration panel</a> as clean as possible. This option allows you to specify how many blocks you wish to use. If you do not plan to show the spam counter to your visitors, set this option to <em>none</em>.',
       array(
-        '@admin-block' => url('admin/block')
+        '!admin-block' => url('admin/block'),
       ))
   );
   $form['general']['akismet_email_enabled'] = array(
@@ -108,35 +108,35 @@ function _akismet_settings_form() {
     '#type' => 'checkboxes', '#title' => t('Check for spam in these node types'),
     '#options' => node_get_types('names'),
     '#default_value' => variable_get('akismet_check_nodetypes', NULL),
-    '#description' => t('Use this option to <em>enable</em> or <em>disable</em> spam check for nodes of types specified here. When this option is enabled, a request will be sent to the <a href="@akismet">Akismet Service</a>, in real time. If the <a href="@akismet">Akismet Service</a> was down, nodes would simply be queued for manual moderation. Users with <a href="@admin-access">@admin-nodes</a> permission and <a href="@admin-access">spam moderators</a> are exempt from this check.',
+    '#description' => t('Use this option to <em>enable</em> or <em>disable</em> spam check for nodes of types specified here. When this option is enabled, a request will be sent to the <a href="!akismet">Akismet Service</a>, in real time. If the <a href="!akismet">Akismet Service</a> was down, nodes would simply be queued for manual moderation. Users with <a href="!admin-access">@admin-nodes</a> permission and <a href="!admin-access">spam moderators</a> are exempt from this check.',
       array(
-        '@akismet' => 'http://akismet.com',
+        '!akismet' => url('http://akismet.com'),
         '@admin-nodes' => t('administer nodes'),
-        '@admin-access' => url('admin/access')
+        '!admin-access' => url('admin/access'),
       ))
   );
   $form['node_options']['akismet_node_publish_links'] = array(
     '#type' => 'radios', '#title' => t('Show publish/unpublish links'),
     '#options' => $enable_options,
     '#default_value' => variable_get('akismet_node_publish_links', 0),
-    '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>publish</em>/<em>unpublish</em> operations in nodes. If enabled, these links will only be displayed to <a href="@admin-access">spam moderators</a> and users with <a href="@admin-access">@admin-nodes</a> permission.',
+    '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>publish</em>/<em>unpublish</em> operations in nodes. If enabled, these links will only be displayed to <a href="!admin-access">spam moderators</a> and users with <a href="!admin-access">@admin-nodes</a> permission.',
       array(
         '@admin-nodes' => t('administer nodes'),
-        '@admin-access' => url('admin/access')
+        '!admin-access' => url('admin/access'),
       ))
   );
   $form['node_options']['akismet_node_spam_links'] = array(
     '#type' => 'radios', '#title' => t('Show submit spam/ham links'),
     '#options' => $enable_options,
     '#default_value' => variable_get('akismet_node_spam_links', 0),
-    '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>submit spam</em>/<em>ham</em> operations in nodes. If enabled, these links will only be displayed to <a href="@admin-access">spam moderators</a> and users with <a href="@admin-access">@admin-nodes</a> permission.',
+    '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>submit spam</em>/<em>ham</em> operations in nodes. If enabled, these links will only be displayed to <a href="!admin-access">spam moderators</a> and users with <a href="!admin-access">@admin-nodes</a> permission.',
       array(
         '@admin-nodes' => t('administer nodes'),
-        '@admin-access' => url('admin/access')
+        '!admin-access' => url('admin/access'),
       ))
-      .'<br />'. t('<strong>Note:</strong> To interact fully with the <a href="@akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use these links to submit missed spam and false positives (ham), otherwise Akismet will never learn from its mistakes. Thank you.',
+      .'<br />'. t('<strong>Note:</strong> To interact fully with the <a href="!akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use these links to submit missed spam and false positives (ham), otherwise Akismet will never learn from its mistakes. Thank you.',
       array(
-        '@akismet' => 'http://akismet.com'
+        '!akismet' => url('http://akismet.com'),
       ))
   );
 
@@ -149,35 +149,35 @@ function _akismet_settings_form() {
       '#type' => 'radios', '#title' => t('Check for spam in comments'),
       '#options' => $enable_options,
       '#default_value' => variable_get('akismet_check_comments', 1),
-      '#description' => t('Use this option to <em>enable</em> or <em>disable</em> spam check for comments. When this option is enabled, a request will be sent to the <a href="@akismet">Akismet Service</a>, in real time. If the <a href="@akismet">Akismet Service</a> was down, comments would simply be queued for manual moderation. Users with <a href="@admin-access">@admin-comments</a> permission and <a href="@admin-access">spam moderators</a> are exempt from this check.',
+      '#description' => t('Use this option to <em>enable</em> or <em>disable</em> spam check for comments. When this option is enabled, a request will be sent to the <a href="!akismet">Akismet Service</a>, in real time. If the <a href="!akismet">Akismet Service</a> was down, comments would simply be queued for manual moderation. Users with <a href="!admin-access">@admin-comments</a> permission and <a href="!admin-access">spam moderators</a> are exempt from this check.',
         array(
-          '@akismet' => 'http://akismet.com',
+          '!akismet' => url('http://akismet.com'),
           '@admin-comments' => t('administer comments'),
-          '@admin-access' => url('admin/access')
+          '!admin-access' => url('admin/access'),
         ))
     );
     $form['comment_options']['akismet_comment_publish_links'] = array(
       '#type' => 'radios', '#title' => t('Show publish/unpublish links'),
       '#options' => $enable_options,
       '#default_value' => variable_get('akismet_comment_publish_links', 1),
-      '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>publish</em>/<em>unpublish</em> operations in comments. If enabled, these links will only be displayed to <a href="@admin-access">spam moderators</a> and users with <a href="@admin-access">@admin-comments</a> permission.',
+      '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>publish</em>/<em>unpublish</em> operations in comments. If enabled, these links will only be displayed to <a href="!admin-access">spam moderators</a> and users with <a href="!admin-access">@admin-comments</a> permission.',
         array(
           '@admin-comments' => t('administer comments'),
-          '@admin-access' => url('admin/access')
+          '!admin-access' => url('admin/access'),
         ))
     );
     $form['comment_options']['akismet_comment_spam_links'] = array(
       '#type' => 'radios', '#title' => t('Show submit spam/ham links'),
       '#options' => $enable_options,
       '#default_value' => variable_get('akismet_comment_spam_links', 1),
-      '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>submit spam</em>/<em>ham</em> operations in comments. If enabled, these links will only be displayed to <a href="@admin-access">spam moderators</a> and users with <a href="@admin-access">@admin-comments</a> permission.',
+      '#description' => t('Use this option to <em>enable</em> or <em>disable</em> links for <em>submit spam</em>/<em>ham</em> operations in comments. If enabled, these links will only be displayed to <a href="!admin-access">spam moderators</a> and users with <a href="!admin-access">@admin-comments</a> permission.',
         array(
           '@admin-comments' => t('administer comments'),
-          '@admin-access' => url('admin/access')
+          '!admin-access' => url('admin/access'),
         ))
-        .'<br />'. t('<strong>Note:</strong> To interact fully with the <a href="@akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use these links to submit missed spam and false positives (ham), otherwise Akismet will never learn from its mistakes. Thank you.',
+        .'<br />'. t('<strong>Note:</strong> To interact fully with the <a href="!akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use these links to submit missed spam and false positives (ham), otherwise Akismet will never learn from its mistakes. Thank you.',
         array(
-          '@akismet' => 'http://akismet.com'
+          '!akismet' => url('http://akismet.com'),
         ))
     );
   }
@@ -219,9 +219,9 @@ function _akismet_settings_form() {
   $form['anti_spambot'] = array(
     '#type' => 'fieldset', '#title' => t('Anti-Spambot Options'),
     '#collapsible' => TRUE, '#collapsed' => TRUE,
-    '#description' => t('The goal of this section is not to replace anything that the <a href="@akismet">Akismet Service</a> itself can do a lot better than us, but to provide a set of simple rules aimed to prevent Denial of Service (DoS) situations that could be caused by certain spambots.',
+    '#description' => t('The goal of this section is not to replace anything that the <a href="!akismet">Akismet Service</a> itself can do a lot better than us, but to provide a set of simple rules aimed to prevent Denial of Service (DoS) situations that could be caused by certain spambots.',
       array(
-        '@akismet' => 'http://akismet.com'
+        '!akismet' => url('http://akismet.com'),
       ))
   );
   $delay_options = drupal_map_assoc(array(0, 30, 60, 90, 120, 150, 180), 'format_interval');
@@ -241,10 +241,10 @@ function _akismet_settings_form() {
     '#type' => 'checkboxes', '#title' => t('Identify spambots by'),
     '#options' => $anti_spambot_rules,
     '#default_value' => variable_get('akismet_antispambot_rules', NULL),
-    '#description' => t('These rules will be applied before sending any request to the <a href="@akismet">Akismet Service</a>. If a request to send content matches any of these rules, the actions defined below will be triggered. Requests to send content are checked against spam that is stored locally (visible from the <a href="@moderation-queue">moderation queue</a>).',
+    '#description' => t('These rules will be applied before sending any request to the <a href="!akismet">Akismet Service</a>. If a request to send content matches any of these rules, the actions defined below will be triggered. Requests to send content are checked against spam that is stored locally (visible from the <a href="!moderation-queue">moderation queue</a>).',
       array(
-        '@akismet' => 'http://akismet.com',
-        '@moderation-queue' => url('admin/content/akismet')
+        '!akismet' => url('http://akismet.com'),
+        '!moderation-queue' => url('admin/content/akismet'),
       ))
   );
   $anti_spambot_actions = array(
@@ -257,10 +257,10 @@ function _akismet_settings_form() {
     '#type' => 'radios', '#title' => t('Actions against spambots'),
     '#options' => $anti_spambot_actions,
     '#default_value' => variable_get('akismet_antispambot_action', '503'),
-    '#description' => t('Use this option to specify what to do against spambots identified by any of the above rules. When a <em>HTTP error</em> is generated (403 or 503), no request to the <a href="@akismet">Akismet Service</a> will be made, the request to post content will not be stored into database and no further moderator notifications will be sent. In any case, when a rule matches, a record of the event will be <a href="@admin-logs">logged</a> for further analysis.',
+    '#description' => t('Use this option to specify what to do against spambots identified by any of the above rules. When a <em>HTTP error</em> is generated (403 or 503), no request to the <a href="!akismet">Akismet Service</a> will be made, the request to post content will not be stored into database and no further moderator notifications will be sent. In any case, when a rule matches, a record of the event will be <a href="!admin-logs">logged</a> for further analysis.',
       array(
-        '@akismet' => 'http://akismet.com',
-        '@admin-logs' => url('admin/logs')
+        '!akismet' => url('http://akismet.com'),
+        '!admin-logs' => url('admin/logs'),
       ))
   );
 
