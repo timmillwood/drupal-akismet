@@ -945,7 +945,7 @@ function akismet_notify_moderators($content_type, $content, $is_published, $is_s
       '!content-link' => url('node/'. $content->nid, NULL, NULL, TRUE)
     );
   }
-  $message_args['@content-status'] = ($is_published ? t('published') : t('published')) . ($is_spam ? ' ('. t('marked as spam') .')' : '');
+  $message_args['@content-status'] = ($is_published ? t('published') : t('not published')) . ($is_spam ? ' ('. t('marked as spam') .')' : '');
   $message_args['@site-name'] = $site_name;
   $message_args['!site-link'] = $base_url . base_path();
   $message_args['@type'] = $moderator_types[$content->type];
