@@ -454,7 +454,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       $subitems = array();
       foreach ($valid_submodes as $key => $title) {
         $sql_cnt = str_replace('%cond', $sql_comments_cond[$key], $sql_comments_cnt);
-        $count = db_result(db_query(db_rewrite_sql($sql_cnt)));
+        $count = db_result(db_query(db_rewrite_sql($sql_cnt, 'c', 'cid')));
         $path = 'admin/content/akismet/comments'. ($key == 'spam' ? '' : '/'. $key);
         $label = ($count > 0 ? l($title, $path) : $title);
         $subitems[] = '<p><strong>'. $label .': '. $count .'</strong></p>';
