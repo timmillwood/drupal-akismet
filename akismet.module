@@ -516,7 +516,7 @@ function _akismet_node_form_validate($form_id, $form_values) {
     $sql_args[] = $_SERVER['REMOTE_ADDR'];
   }
   if ($antispambot_rules['body'] && !empty($form_values['body'])) {
-    $sql_where[] = 'n.body = \'%s\'';
+    $sql_where[] = 'r.body = \'%s\'';
     $sql_args[] = $form_values['body'];
   }
   if ($antispambot_rules['mail'] && !empty($user->mail)) {
