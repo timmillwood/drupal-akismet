@@ -654,10 +654,10 @@ function _akismet_comment_form_submit($form_id, $form_values, $original_submit_c
 
         // Record the event to watchdog.
         if ($akismet_api_result == AKISMET_API_RESULT_ERROR) {
-          watchdog('content', t('Akismet service seems to be down, comment queued for manual approval: %subject', array('%subject' => theme('placeholder', $comment->subject))), WATCHDOG_WARNING, l(t('view'), 'node/'. $comment->nid, NULL, NULL, 'comment-'. $comment->cid));
+          watchdog('content', t('Akismet service seems to be down, comment queued for manual approval: %subject', array('%subject' => $comment->subject)), WATCHDOG_WARNING, l(t('view'), 'node/'. $comment->nid, NULL, NULL, 'comment-'. $comment->cid));
         }
         else {
-          watchdog('content', t('Spam detected by Akismet in comment: %subject', array('%subject' => theme('placeholder', $comment->subject))), WATCHDOG_WARNING, l(t('view'), 'node/'. $comment->nid, NULL, NULL, 'comment-'. $comment->cid));
+          watchdog('content', t('Spam detected by Akismet in comment: %subject', array('%subject' => $comment->subject)), WATCHDOG_WARNING, l(t('view'), 'node/'. $comment->nid, NULL, NULL, 'comment-'. $comment->cid));
           // If requested to, generate a delay so the spammer has to wait for a while.
           if (($seconds = variable_get('akismet_antispambot_delay', 60)) > 0) {
             sleep($seconds);
@@ -932,39 +932,40 @@ function akismet_notify_moderators($content_type, $content, $is_published, $is_s
     }
     $message_args = array(
       '@title-label' => t('Subject'),
-      '%content-title' => check_plain($content->subject),
-      '%content-type' => t('comment'),
+      '@content-title' => $content->subject,
+      '@content-type' => t('comment'),
       '!content-link' => url('node/'. $content->nid, NULL, 'comment-'. $content->cid, TRUE)
     );
-    $message_title = t('[%site-name] moderator notification - Posted comment on \'@title\'', array('%site-name' => $site_name, '@title' => check_plain($node->title)));
   }
   else {
     $message_args = array(
       '@title-label' => t('Title'),
-      '%content-title' => check_plain($content->title),
-      '%content-type' => check_plain($moderator_types[$content->type]),
+      '@content-title' => $content->title,
+      '@content-type' => $moderator_types[$content->type],
       '!content-link' => url('node/'. $content->nid, NULL, NULL, TRUE)
     );
-    $message_title = t('[%site-name] moderator notification - Posted %type \'@title\'', array('%site-name' => $site_name, '%type' => check_plain($moderator_types[$content->type]), '@title' => check_plain($content->title)));
   }
-  $message_args['%content-status'] = ($is_published ? t('published') : t('published')) . ($is_spam ? ' ('. t('marked as spam') .')' : '');
-  $message_args['%site-name'] = check_plain($site_name);
-  $message_args['%site-link'] = $base_url . base_path();
+  $message_args['@content-status'] = ($is_published ? t('published') : t('published')) . ($is_spam ? ' ('. t('marked as spam') .')' : '');
+  $message_args['@site-name'] = $site_name;
+  $message_args['!site-link'] = $base_url . base_path();
+  $message_args['@type'] = $moderator_types[$content->type];
+
+  $message_title = t('[@site-name] moderator notification - Posted @content-type \'@content-title\'', $message_args);
 
   $message_body = t(<<<EOT
-Hello %user-name,
+Hello @user-name,
 
-You can use the following information to review this %content-type:
+You can use the following information to review this @content-type:
 
-@title-label: %content-title
+@title-label: @content-title
 URL: !content-link
-Status: %content-status
+Status: @content-status
 
-Please, do not reply to this e-mail. It is an automated notification you are receiving because you are a moderator at %site-name. If you no longer wish to receive such notifications, you can change your moderator settings in your user profile.
+Please, do not reply to this e-mail. It is an automated notification you are receiving because you are a moderator at @site-name. If you no longer wish to receive such notifications, you can change your moderator settings in your user profile.
 
 Thank you
 
-%site-link
+!site-link
 EOT
   , $message_args);
 
@@ -972,16 +973,12 @@ EOT
   watchdog('akismet', t('Trying to notify the following recipients: %emails', array('%emails' => implode(', ', array_keys($unique_emails)))));
 
   // Send e-mails.
-  $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
-  $headers = "From: $site_mail\nReply-to: $site_mail\nX-Mailer: Drupal\nReturn-path: $site_mail\nErrors-to: $site_mail";
   foreach ($unique_emails as $email_to => $uid) {
     drupal_mail(
       'akismet_moderator_notification',
       $email_to,
       $message_title,
-      str_replace('%user-name', check_plain($moderators[$uid]['name']), $message_body),
-      variable_get('site_mail', ''),
-      $headers
+      str_replace('@user-name', check_plain($moderators[$uid]['name']), $message_body)
     );
   }
 }
@@ -1280,7 +1277,7 @@ function akismet_content_delete($content_type, $content_id) {
       }
 
       // Record the event to watchdog.
-      watchdog('content', t('%type: deleted @title.', array('%type' => theme('placeholder', t($node->type)), '@title' => theme('placeholder', $node->title))));
+      watchdog('content', t('%type: deleted @title.', array('%type' => t($node->type), '@title' => $node->title)));
       return TRUE;
     }
   }
@@ -1357,7 +1354,7 @@ function akismet_content_spam_operation($content_type, $content, $op, $log_actio
   }
 
   if ($log_action) {
-    watchdog('content', t('@action: @title', array('@action' => $action, '@title' => theme('placeholder', $content_title))), WATCHDOG_NOTICE, $content_link);
+    watchdog('content', t('@action: @title', array('@action' => $action, '@title' => $content_title)), WATCHDOG_NOTICE, $content_link);
   }
   akismet_clear_cache();
 }
@@ -1380,7 +1377,7 @@ function akismet_content_publish_operation($content_type, $content, $op, $log_ac
 
     if ($log_action) {
       $action = ($op == 'publish' ? t('Content published') : t('Content unpublished'));
-      watchdog('content', t('@action: @title', array('@action' => $action, '@title' => theme('placeholder', $content->title))), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid));
+      watchdog('content', t('@action: @title', array('@action' => $action, '@title' => $content->title)), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid));
     }
   }
   else { // comment
@@ -1404,7 +1401,7 @@ function akismet_content_publish_operation($content_type, $content, $op, $log_ac
 
     if ($log_action) {
       $action = ($op == 'publish' ? t('Comment published') : t('Comment unpublished'));
-      watchdog('content', t('@action: %subject', array('@action' => $action, '%subject' => theme('placeholder', $content->subject))), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid, NULL, NULL, 'comment-'. $content->cid));
+      watchdog('content', t('@action: %subject', array('@action' => $action, '%subject' => $content->subject)), WATCHDOG_NOTICE, l(t('view'), 'node/'. $content->nid, NULL, NULL, 'comment-'. $content->cid));
     }
   }
 
