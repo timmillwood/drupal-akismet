@@ -1104,7 +1104,7 @@ function akismet_block($op = 'list', $delta = 0, $edit = array()) {
       $blocks_counter = variable_get('akismet_blocks_counter', 1);
       $blocks = array();
       for ($i = 0; $i < $blocks_counter; $i++) {
-        $blocks[] = array('info' => t('Akismet spam counter (block:@count)', array('@count' => ($i+1))));
+        $blocks[] = array('info' => t('Akismet spam counter (block: @count)', array('@count' => ($i+1))));
       }
       return $blocks;
 
