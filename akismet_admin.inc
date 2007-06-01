@@ -415,7 +415,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
     $sql_nodes_stmt = 'SELECT n.*, u.name, IFNULL(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON n.uid = u.uid '. $sql_where;
     $sql_nodes_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
-  if ($allowed_comments) {
+  if (module_exists('comment') && $allowed_comments) {
     $sql_from = 'FROM {comments} c LEFT JOIN {akismet_spam_marks} s ON s.content_id = c.cid AND s.content_type = \'comment\'';
     $sql_where = 'WHERE (%cond)';
     $sql_comments_cond = array(
@@ -450,7 +450,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       }
       $items[] = '<h4>'. t('Nodes') .'</h4>'. theme('item_list', $subitems);
     }
-    if ($allowed_comments) {
+    if (module_exists('comment') && $allowed_comments) {
       $subitems = array();
       foreach ($valid_submodes as $key => $title) {
         $sql_cnt = str_replace('%cond', $sql_comments_cond[$key], $sql_comments_cnt);
