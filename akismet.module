@@ -27,7 +27,6 @@ define('AKISMET_API_RESULT_IS_HAM', 2);
  * Implementation of hook_help().
  */
 function akismet_help($section) {
-  $output = '';
   switch ($section) {
     case 'admin/help#akismet':
       $output = t('<p>In order to use the <a href="!akismet">Akismet Service</a>, you need a <a href="!wpapikey">WordPress.com API key</a>. If you don\'t have one already, you can get it by simply signing up for a free account at <a href="!wordpress-com">wordpress.com</a>. Please, consult the <a href="!akismet-faq">Akismet FAQ</a> for further information.</p>
@@ -44,7 +43,7 @@ function akismet_help($section) {
           '!access-control' => url('admin/access'),
           '%no-check-perm' => t('post with no akismet checking')
         ));
-      break;
+      return $output;
     case 'admin/help/akismet':
     case 'admin/settings/akismet':
       $output = t('<p>The <a href="!akismet-module-home">akismet module</a> for <a href="!drupal">Drupal</a> allows you to use the <a href="!akismet">Akismet Service</a> to protect your site from being spammed.</p>',
@@ -54,7 +53,7 @@ function akismet_help($section) {
           '!akismet' => url('http://akismet.com')
         ));
       $output .= t('<p>Akismet has caught <strong>@count spam</strong> for you since %since.</p>', array('@count' => akismet_get_spam_counter(), '%since' => akismet_get_counting_since()));
-      break;
+      return $output;
     default:
       if (arg(0) == 'admin' && arg(1) == 'content '&& arg(2) == 'akismet' && !isset($_POST)) {
         if (arg(3) == 'nodes') {
@@ -83,11 +82,11 @@ function akismet_help($section) {
         }
         if (!empty($output)) {
           $output .= '<br />'. t('<strong>Note:</strong> To interact fully with the <a href="!akismet">Akismet Service</a> you really should try putting data back into the system as well as just taking it out. If it is at all possible, please use the submit <em>ham</em> operation rather than simply publishing content that was identified as spam (false positives). This is necessary in order to let Akismet learn from its mistakes. Thank you.', array('!akismet' => url('http://akismet.com')));
+          return $output;
         }
       }
       break;
   }
-  return $output;
 }
 
 // Check run-time requirements and status information
