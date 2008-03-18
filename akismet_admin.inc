@@ -412,7 +412,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       'published' => 'n.status = 1'
     );
     
-    $sql_nodes_stmt = 'SELECT n.*, u.name, IFNULL(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON n.uid = u.uid '. $sql_where;
+    $sql_nodes_stmt = 'SELECT n.*, u.name, COALESCE(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON n.uid = u.uid '. $sql_where;
     $sql_nodes_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
   if (module_exists('comment') && $allowed_comments) {
@@ -423,7 +423,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       'unpublished' => 'c.status = '. COMMENT_NOT_PUBLISHED,
       'published' => 'c.status = '. COMMENT_PUBLISHED
     );
-    $sql_comments_stmt = 'SELECT c.*, u.name AS registered_name, IFNULL(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON c.uid = u.uid '. $sql_where;
+    $sql_comments_stmt = 'SELECT c.*, u.name AS registered_name, COALESCE(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON c.uid = u.uid '. $sql_where;
     $sql_comments_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
 
