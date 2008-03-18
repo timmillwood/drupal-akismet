@@ -415,7 +415,7 @@ function akismet_nodeapi(&$node, $op, $teaser, $page) {
         }
 
         // Since users won't see their content published, show them a polite explanation on why.
-        $content_type_name = node_get_name($node);
+        $content_type_name = node_get_types('name', $node);
         drupal_set_message(t('Your %content-type-name has been queued for moderation by site administrators and will be published after approval.', array('%content-type-name' => $content_type_name)));
 
         // Record the event to watchdog.
