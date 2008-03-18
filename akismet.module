@@ -247,36 +247,36 @@ function akismet_link($type, $content = 0, $main = 0) {
   if ($type == 'node' && akismet_is_spam_moderator($content->type)) {
     if (variable_get('akismet_node_publish_links', 0)) {
       if ($content->status) {
-        $links[] = array('title' => t('unpublish'), 'href' => 'akismet/node/'. $content->nid .'/unpublish');
+        $links['akismet_node_unpublish'] = array('title' => t('unpublish'), 'href' => 'akismet/node/'. $content->nid .'/unpublish');
       }
       else {
-        $links[] = array('title' => t('publish'), 'href' => 'akismet/node/'. $content->nid .'/publish');
+        $links['akismet_node_publish'] = array('title' => t('publish'), 'href' => 'akismet/node/'. $content->nid .'/publish');
       }
     }
     if (variable_get('akismet_node_spam_links', 0)) {
       if (akismet_content_is_spam('node', $content->nid)) {
-        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'href' => 'akismet/node/'. $content->nid .'/submit-ham');
+        $links['akismet_node_ham'] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'href' => 'akismet/node/'. $content->nid .'/submit-ham');
       }
       else {
-        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'href' => 'akismet/node/'. $content->nid .'/submit-spam');
+        $links['akismet_node_spam'] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'href' => 'akismet/node/'. $content->nid .'/submit-spam');
       }
     }
   }
   else if ($type == 'comment' && akismet_is_spam_moderator('comments')) {
     if (variable_get('akismet_comment_publish_links', 1)) {
       if ($content->status == COMMENT_PUBLISHED) {
-        $links[] = array('title' => t('unpublish'), 'href' => 'akismet/comment/'. $content->cid .'/unpublish');
+        $links['akismet_comment_unpublish'] = array('title' => t('unpublish'), 'href' => 'akismet/comment/'. $content->cid .'/unpublish');
       }
       else if ($content->status == COMMENT_NOT_PUBLISHED) {
-        $links[] = array('title' => t('publish'), 'href' => 'akismet/comment/'. $content->cid .'/publish');
+        $links['akismet_comment_publish'] = array('title' => t('publish'), 'href' => 'akismet/comment/'. $content->cid .'/publish');
       }
     }
     if (variable_get('akismet_comment_spam_links', 1)) {
       if (akismet_content_is_spam('comment', $content->cid)) {
-        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'href' => 'akismet/comment/'. $content->cid .'/submit-ham');
+        $links['akismet_comment_ham'] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit ham') : t('mark as ham')), 'href' => 'akismet/comment/'. $content->cid .'/submit-ham');
       }
       else {
-        $links[] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'href' => 'akismet/comment/'. $content->cid .'/submit-spam');
+        $links['akismet_comment_spam'] = array('title' => (variable_get('akismet_connection_enabled', 1) ? t('submit spam') : t('mark as spam')), 'href' => 'akismet/comment/'. $content->cid .'/submit-spam');
       }
     }
   }
@@ -1452,7 +1452,7 @@ function akismet_prepare_comment_data($content_type, $content) {
 \************************************************************/
 
 /**
- * Akismet API: Key Verification — rest.akismet.com/1.1/verify key
+ * Akismet API: Key Verification - rest.akismet.com/1.1/verify key
  *
  * @param string WordPress API Key.
  * @return integer See constants AKISMET_API_RESULT_xxx.
@@ -1467,7 +1467,7 @@ function akismet_api_cmd_verify_key($key) {
 }
 
 /**
- * Akismet API: Comment Check — api-key.rest.akismet.com/1.1/comment-check
+ * Akismet API: Comment Check - api-key.rest.akismet.com/1.1/comment-check
  *
  * @param array Comment data; see function akismet_prepare_comment_data().
  * @return integer See constants AKISMET_API_RESULT_xxx.
@@ -1490,7 +1490,7 @@ function akismet_api_cmd_comment_check($comment_data) {
 }
 
 /**
- * Akismet API: Submit Spam — api-key.rest.akismet.com/1.1/submit-spam
+ * Akismet API: Submit Spam - api-key.rest.akismet.com/1.1/submit-spam
  *
  * @param array Comment data; see function akismet_prepare_comment_data().
  * @return integer See constants AKISMET_API_RESULT_xxx.
@@ -1509,7 +1509,7 @@ function akismet_api_cmd_submit_spam($comment_data) {
 }
 
 /**
- * Akismet API: Submit Ham — api-key.rest.akismet.com/1.1/submit-ham
+ * Akismet API: Submit Ham - api-key.rest.akismet.com/1.1/submit-ham
  *
  * @param array Comment data; see function akismet_prepare_comment_data().
  * @return integer See constants AKISMET_API_RESULT_xxx.
