@@ -2,6 +2,13 @@
 // $Id$
 
 /**
+ * Implementation of hook_settings().
+ */
+function akismet_settings() {
+  return _akismet_settings_form();
+}
+
+/**
  * Build the akismet settings form.
  */
 function _akismet_settings_form() {
@@ -257,10 +264,10 @@ function _akismet_settings_form() {
     '#type' => 'radios', '#title' => t('Actions against spambots'),
     '#options' => $anti_spambot_actions,
     '#default_value' => variable_get('akismet_antispambot_action', '503'),
-    '#description' => t('Use this option to specify what to do against spambots identified by any of the above rules. When a <em>HTTP error</em> is generated (403 or 503), no request to the <a href="!akismet">Akismet Service</a> will be made, the request to post content will not be stored into database and no further moderator notifications will be sent. In any case, when a rule matches, a record of the event will be <a href="!admin-logs">logged</a> for further analysis.',
+    '#description' => t('Use this option to specify what to do against spambots identified by any of the above rules. When a <em>HTTP error</em> is generated (403 or 503), no request to the <a href="!akismet">Akismet Service</a> will be made, the request to post content will not be stored into database and no further moderator notifications will be sent. In any case, when a rule matches, a record of the event will be <a href="!admin-reports">logged</a> for further analysis.',
       array(
         '!akismet' => url('http://akismet.com'),
-        '!admin-logs' => url('admin/logs'),
+        '!admin-reports' => url('admin/reports'),
       ))
   );
 
@@ -412,7 +419,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       'published' => 'n.status = 1'
     );
     
-    $sql_nodes_stmt = 'SELECT n.*, u.name, COALESCE(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON n.uid = u.uid '. $sql_where;
+    $sql_nodes_stmt = 'SELECT n.*, u.name, IFNULL(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON n.uid = u.uid '. $sql_where;
     $sql_nodes_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
   if (module_exists('comment') && $allowed_comments) {
@@ -423,7 +430,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
       'unpublished' => 'c.status = '. COMMENT_NOT_PUBLISHED,
       'published' => 'c.status = '. COMMENT_PUBLISHED
     );
-    $sql_comments_stmt = 'SELECT c.*, u.name AS registered_name, COALESCE(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON c.uid = u.uid '. $sql_where;
+    $sql_comments_stmt = 'SELECT c.*, u.name AS registered_name, IFNULL(s.content_id, 0) AS spam_mark '. $sql_from .' INNER JOIN {users} u ON c.uid = u.uid '. $sql_where;
     $sql_comments_cnt = 'SELECT COUNT(*) AS cnt '. $sql_from .' '. $sql_where;
   }
 
@@ -593,17 +600,17 @@ function theme_akismet_moderation_form($form) {
 /**
  * Form API callback; Validate the moderation queue form.
  */
-function akismet_moderation_form_validate($form_id, $edit) {
-  $mode = $edit['mode'];
-  $submode = $edit['submode'];
-  $operation = $edit['operation'];
+function akismet_moderation_form_validate($form, &$form_state) {
+  $mode = $form_state['values']['mode'];
+  $submode = $form_state['values']['submode'];
+  $operation = $form_state['values']['operation'];
   $valid_operations = akismet_moderator_operations($mode, $submode);
 
   if (!isset($valid_operations[$operation])) {
     form_set_error('', t('Please, choose a valid operation.'));
   }
-  $edit['items'] = array_diff($edit['items'], array(0));
-  if (count($edit['items']) == 0) {
+  $form_state['values']['items'] = array_diff($form_state['values']['items'], array(0));
+  if (count($form_state['values']['items']) == 0) {
     if ($operation == 'delete') {
       form_set_error('', t('Please, select some items to perform the delete operation.'));
     }
@@ -659,10 +666,10 @@ function akismet_confirm_multiple_operation() {
 /**
  * confirm_form callback; perform the actual operation against selected content.
  */
-function akismet_confirm_multiple_operation_submit($form_id, $edit) {
-  $mode = $edit['mode'];
-  $submode = $edit['submode'];
-  $operation = $edit['operation'];
+function akismet_confirm_multiple_operation_submit($form, &$form_state) {
+  $mode = $form_state['values']['mode'];
+  $submode = $form_state['values']['submode'];
+  $operation = $form_state['values']['operation'];
   $valid_operations = akismet_moderator_operations($mode, $submode);
 
   // Make sure we deal with a valid combination of mode, submode and operation.
@@ -670,9 +677,9 @@ function akismet_confirm_multiple_operation_submit($form_id, $edit) {
     return 'admin/content/akismet';
   }
 
-  if ($edit['confirm']) {
+  if ($form_state['values']['confirm']) {
     $content_type = ($mode == 'nodes' ? 'node' : 'comment');
-    foreach ($edit['items'] as $content_id => $value) {
+    foreach ($form_state['values']['items'] as $content_id => $value) {
       if ($operation == 'delete') {
         akismet_content_delete($content_type, $content_id);
         $message = ($mode == 'nodes' ? t('The nodes have been deleted.') : t('The comments have been deleted.'));

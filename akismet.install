@@ -2,80 +2,115 @@
 // $Id$
 
 /**
+ * Implementation of hook_schema().
+ */
+function akismet_schema() {
+  $schema['akismet_spam_marks'] = array(
+    'fields' => array(
+      'content_type' => array(
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'content_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'spam_created' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'hostname' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'mail' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'unique key' => array(
+      'content' => array('content_type', 'content_id'),
+    ),
+    'indexes' => array(
+      'spam_created' => array('spam_created'),
+      'hostname' => array('hostname'),
+      'mail' => array('mail'),
+    ),
+  );
+  $schema['akismet_moderator'] = array(
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'email_for' => array(
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('uid'),
+    'indexes' => array(
+      'email_for' => array('email_for'),
+    ),
+  );
+  return $schema;
+}
+
+/**
  * Implementation of hook_install().
  */
 function akismet_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {akismet_spam_marks} (
-          content_type varchar(20) NOT NULL default '',
-          content_id int(10) unsigned NOT NULL default 0,
-          spam_created int(11) unsigned NOT NULL default 0,
-          hostname varchar(128) NOT NULL default '',
-          mail varchar(128) NOT NULL default '',
-          UNIQUE content (content_type, content_id),
-          INDEX spam_created (spam_created),
-          INDEX hostname (hostname),
-          INDEX mail (mail)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      db_query("CREATE TABLE {akismet_moderator} (
-          uid int(10) unsigned NOT NULL default 0,
-          email_for varchar(20) NOT NULL default '',
-          PRIMARY KEY (uid),
-          INDEX email_for (email_for)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
+  drupal_install_schema('akismet');
+}
 
-    case 'pgsql':
-      db_query("CREATE TABLE {akismet_spam_marks} (
-          content_type varchar(20) NOT NULL default '',
-          content_id integer NOT NULL default 0 CHECK (content_id >= 0),
-          spam_created integer NOT NULL default 0 CHECK (spam_created >= 0),
-          hostname varchar(128) NOT NULL default '',
-          mail varchar(128) NOT NULL default ''
-        )");
-      db_query("CREATE UNIQUE INDEX {akismet_spam_marks_content} ON {akismet_spam_marks} (content_type, content_id)");
-      db_query("CREATE INDEX {akismet_spam_marks_spamcreated} ON {akismet_spam_marks} (spam_created)");
-      db_query("CREATE INDEX {akismet_spam_marks_hostname} ON {akismet_spam_marks} (hostname)");
-      db_query("CREATE INDEX {akismet_spam_marks_mail} ON {akismet_spam_marks} (mail)");
-      db_query("CREATE TABLE {akismet_moderator} (
-          uid INTEGER NOT NULL DEFAULT 0 CHECK (uid >= 0),
-          email_for VARCHAR(20) NOT NULL DEFAULT '',
-          PRIMARY KEY (uid)
-        )");
-      db_query("CREATE INDEX {akismet_moderator_email_for} ON {akismet_moderator} (email_for)");
-      break;
-  }
+/**
+ * Implementation of hook_uninstall().
+ */
+function akismet_uninstall() {
+  drupal_uninstall_schema('akismet');
 }
 
 /**
  * Update 1: Add table for moderator extensions.
  */
 function akismet_update_1() {
+  $schema['akismet_moderator'] = array(
+    'field' => array(
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'email_for' => array(
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('uid'),
+    'indexes' => array(
+      'email_for' => array('email_for'),
+    ),
+  );
+
   $ret = array();
-
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("CREATE TABLE {akismet_moderator} (
-          uid int(10) unsigned NOT NULL default 0,
-          email_for varchar(20) NOT NULL default '',
-          PRIMARY KEY (uid),
-          INDEX email_for (email_for)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
-
-    case 'pgsql':
-      $ret[] = update_sql("CREATE TABLE {akismet_moderator} (
-          uid INTEGER NOT NULL DEFAULT 0 CHECK (uid >= 0),
-          email_for VARCHAR(20) NOT NULL DEFAULT '',
-          PRIMARY KEY (uid)
-        )");
-      $ret[] = update_sql("CREATE INDEX {akismet_moderator_email_for} ON {akismet_moderator} (email_for)");
-      break;
-  }
-
+  db_create_table($ret, 'akismet_moderator', $schema['akismet_moderator']);
   return $ret;
 }
 
@@ -85,30 +120,21 @@ function akismet_update_1() {
 function akismet_update_2() {
   $ret = array();
 
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ADD COLUMN hostname varchar(128) NOT NULL default ''");
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ADD INDEX hostname (hostname)");
+  db_add_field($ret, 'akismet_spam_marks', 'hostname', array(
+    'type' => 'varchar',
+    'length' => 128,
+    'not null' => TRUE,
+    'default' => '',
+  ));
+  db_add_index($ret, 'akismet_spam_marks', 'hostname', array('hostname'));
 
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ADD COLUMN mail varchar(128) NOT NULL default ''");
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ADD INDEX mail (mail)");
-      break;
-
-    case 'pgsql':
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ADD COLUMN hostname VARCHAR(128)");
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ALTER COLUMN hostname SET DEFAULT ''");
-      $ret[] = update_sql("UPDATE TABLE {akismet_spam_marks} SET hostname = '' WHERE hostname IS NULL");
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ALTER COLUMN hostname SET NOT NULL");
-      $ret[] = update_sql("CREATE INDEX {akismet_spam_marks_hostname} ON {akismet_spam_marks} (hostname)");
-
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ADD COLUMN mail VARCHAR(128)");
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ALTER COLUMN mail SET DEFAULT ''");
-      $ret[] = update_sql("UPDATE TABLE {akismet_spam_marks} SET mail = '' WHERE mail IS NULL");
-      $ret[] = update_sql("ALTER TABLE {akismet_spam_marks} ALTER COLUMN mail SET NOT NULL");
-      $ret[] = update_sql("CREATE INDEX {akismet_spam_marks_mail} ON {akismet_spam_marks} (mail)");
-      break;
-  }
+  db_add_field($ret, 'akismet_spam_marks', 'mail', array(
+    'type' => 'varchar',
+    'length' => 128,
+    'not null' => TRUE,
+    'default' => '',
+  ));
+  db_add_index($ret, 'akismet_spam_marks', 'mail', array('mail'));
 
   return $ret;
 }

@@ -5,7 +5,7 @@
  * Shutdown function executed at cron time.
  */
 function akismet_cron_shutdown() {
-  watchdog('cron', t('Akismet cron started at %time.', array('%time' => format_date(time(), 'custom', 'H:i:s'))));
+  watchdog('cron', 'Akismet cron started at %time.', array('%time' => format_date(time(), 'custom', 'H:i:s')));
 
   // Expired content spam that we have to remove from each content repository.
   $expired_content_spam = array('nids'=>array(), 'cids'=>array());
@@ -15,13 +15,11 @@ function akismet_cron_shutdown() {
   // Retrieve the list of expired content spam, based on the age specified in the settings panel.
   $expire_spam_age = variable_get('akismet_remove_spam_age', 259200);
   if ($expire_spam_age > 0) {
-    $result = db_query('SELECT content_type, content_id FROM {akismet_spam_marks} WHERE spam_created < %d', time() - $expire_spam_age);
-    if (db_num_rows($result)) {
-      while ($s = db_fetch_object($result)) {
-        $key = ($s->content_type == 'node' ? 'nids' : 'cids');
-        $expired_content_spam[$key][] = $s->content_id;
-        $obsolete_spam_marks[$key][] = $s->content_id;
-      }
+    $result = db_result(db_query('SELECT content_type, content_id FROM {akismet_spam_marks} WHERE spam_created < %d', time() - $expire_spam_age));
+    while ($s = db_fetch_object($result)) {
+      $key = ($s->content_type == 'node' ? 'nids' : 'cids');
+      $expired_content_spam[$key][] = $s->content_id;
+      $obsolete_spam_marks[$key][] = $s->content_id;
     }
   }
 
@@ -30,20 +28,16 @@ function akismet_cron_shutdown() {
   // so that may lead to orphans in the 'spam marks' table.
   // This is why this cron task is being more complex that it could really be. Anyway, these
   // queries shouldn't be too heavy.
-  $result = db_query('SELECT s.content_id FROM {akismet_spam_marks} s LEFT JOIN {node} n ON s.content_id = n.nid WHERE s.content_type = \'node\' AND n.nid IS NULL');
-  if (db_num_rows($result)) {
-    while ($s = db_fetch_object($result)) {
-      if (!in_array($s->content_id, $obsolete_spam_marks['nids'])) {
-        $obsolete_spam_marks['nids'][] = $s->content_id;
-      }
+  $result = db_result(db_query('SELECT s.content_id FROM {akismet_spam_marks} s LEFT JOIN {node} n ON s.content_id = n.nid WHERE s.content_type = \'node\' AND n.nid IS NULL'));
+  while ($s = db_fetch_object($result)) {
+    if (!in_array($s->content_id, $obsolete_spam_marks['nids'])) {
+      $obsolete_spam_marks['nids'][] = $s->content_id;
     }
   }
-  $result = db_query('SELECT s.content_id FROM {akismet_spam_marks} s LEFT JOIN {comments} c ON s.content_id = c.cid WHERE s.content_type = \'comment\' AND c.cid IS NULL');
-  if (db_num_rows($result)) {
-    while ($s = db_fetch_object($result)) {
-      if (!in_array($s->content_id, $obsolete_spam_marks['cids'])) {
-        $obsolete_spam_marks['cids'][] = $s->content_id;
-      }
+  $result = db_result(db_query('SELECT s.content_id FROM {akismet_spam_marks} s LEFT JOIN {comments} c ON s.content_id = c.cid WHERE s.content_type = \'comment\' AND c.cid IS NULL'));
+  while ($s = db_fetch_object($result)) {
+    if (!in_array($s->content_id, $obsolete_spam_marks['cids'])) {
+      $obsolete_spam_marks['cids'][] = $s->content_id;
     }
   }
 
@@ -115,5 +109,5 @@ function akismet_cron_shutdown() {
   if ($clear_cache) {
     akismet_clear_cache();
   }
-  watchdog('cron', t('Akismet cron completed at %time.', array('%time' => format_date(time(), 'custom', 'H:i:s'))));
+  watchdog('cron', 'Akismet cron completed at %time.', array('%time' => format_date(time(), 'custom', 'H:i:s')));
 }
