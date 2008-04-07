@@ -208,7 +208,7 @@ function akismet_menu() {
         'title' => t('Nodes'),
         'page callback' => 'akismet_callback_queue',
         'page arguments' => array('nodes'),
-        'access callback' => array('_akismet_is_node_moderator'),
+        'access callback' => '_akismet_is_node_moderator',
         'access arguments' => array($moderator_types),
         'type' => MENU_LOCAL_TASK,
         'weight' => 1,
@@ -276,7 +276,7 @@ function akismet_menu() {
       'page callback' => 'akismet_page',
       'page arguments' => array(0, 1, 2, 3),
       'load arguments' => array('%map', '%index'),
-      'access callback' => array('akismet_access_callback'),
+      'access callback' => 'akismet_access_callback',
       'access argument' => array(0, 1, 2, 3),
     );
     foreach (array('publish', 'unpublish', 'submit-spam', 'submit-ham') as $op) {
