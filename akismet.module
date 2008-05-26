@@ -193,7 +193,7 @@ function akismet_menu() {
       'title' => t('Akismet moderation queue'),
       'description' => t('Manage the Akismet spam queue, appropving or deleting content in need of moderation.'),
       'page callback' => 'akismet_callback_queue',
-      'access callback' => array('_akismet_is_moderator'),
+      'access callback' => '_akismet_is_moderator',
       'access arguments' => array($moderator_types),
       'file' => 'akismet.admin.inc',
    );
@@ -241,7 +241,7 @@ function akismet_menu() {
         'title' => t('Comments'),
         'page callback' => 'akismet_callback_queue',
         'page arguments' => array('comments'),
-        'access callback' => array('_akismet_is_moderator'),
+        'access callback' => '_akismet_is_moderator',
         'access arguments' => array($moderator_types, 'comments'),
         'type' => MENU_LOCAL_TASK,
         'weight' => 2,
