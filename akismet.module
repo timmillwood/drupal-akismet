@@ -476,7 +476,7 @@ function akismet_nodeapi(&$node, $op, $teaser, $page) {
       }
 
       // Now, check if it's about a node type that we have not been explicitly requested to check.
-      $check_nodetypes = variable_get('akismet_check_nodetypes', NULL);
+      $check_nodetypes = variable_get('akismet_check_nodetypes', array());
       if (!is_array($check_nodetypes) || !isset($check_nodetypes[$node->type]) || !$check_nodetypes[$node->type]) {
         akismet_notify_moderators('node', $node, ($node->status ? TRUE : FALSE), FALSE);
         break;
@@ -574,7 +574,7 @@ function akismet_form_alter(&$form, &$form_state, $form_id) {
     // ...only if current user is not moderator.
     if (!akismet_is_spam_moderator('comments')) {
       // ...also check if it's about a node type that we have been explicitly requested to check.
-      $check_nodetypes = variable_get('akismet_check_nodetypes', NULL);
+      $check_nodetypes = variable_get('akismet_check_nodetypes', array());
       $node_type = $form['type']['#value'];
       if (is_array($check_nodetypes) && isset($check_nodetypes[$node_type]) && $check_nodetypes[$node_type]) {
         // Inject anti-spambot code, if requested to.
@@ -769,7 +769,7 @@ function akismet_get_anti_spambot_rules() {
   static $antispambot_rules = FALSE;
   if (!$antispambot_rules) {
     $antispambot_rules = array();
-    $options = variable_get('akismet_antispambot_rules', NULL);
+    $options = variable_get('akismet_antispambot_rules', array());
     if (is_array($options)) {
       foreach ($options as $key => $value) {
         if (is_string($key)) {
