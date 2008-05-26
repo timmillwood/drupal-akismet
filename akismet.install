@@ -82,6 +82,24 @@ function akismet_install() {
  */
 function akismet_uninstall() {
   drupal_uninstall_schema('akismet');
+  variable_del('akismet_wpapikey');
+  variable_del('akismet_connection_enabled');
+  variable_del('akismet_connection_timeout');
+  variable_del('akismet_remove_spam_age');
+  variable_del('akismet_records_per_page');
+  variable_del('akismet_blocks_counter');
+  variable_del('akismet_email_enabled');
+  variable_del('akismet_check_nodetypes');
+  variable_del('akismet_node_publish_links');
+  variable_del('akismet_node_spam_links');
+  variable_del('akismet_check_comments');
+  variable_del('akismet_comment_publish_links');
+  variable_del('akismet_comment_spam_links');
+  variable_del('akismet_counter_since');
+  variable_del('akismet_counter_date_format');
+  variable_del('akismet_antispambot_delay');
+  variable_del('akismet_antispambot_rules');
+  variable_del('akismet_antispambot_action');
 }
 
 /**
