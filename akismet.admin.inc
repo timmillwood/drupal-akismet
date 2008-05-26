@@ -478,7 +478,7 @@ function akismet_callback_queue($mode = '', $submode = '') {
   }
 }
 
-function akismet_moderation_form($mode = '', $submode = '', $sql = array()) {
+function akismet_moderation_form($form_state, $mode = '', $submode = '', $sql = array()) {
   // Build the moderation queue form.
   $form = array();
   $form['options'] = array(
