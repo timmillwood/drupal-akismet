@@ -469,8 +469,9 @@ function akismet_nodeapi(&$node, $op, $teaser, $page) {
         break;
       }
 
-      // Also quit asap, if current user has administration permission.
-      if (akismet_is_spam_moderator($node->type)) {
+      // Also quit asap, if current user has administration permission
+      // or permission to post without spam checking.
+      if (akismet_is_spam_moderator($node->type) || user_access('post with no akismet checking')) {
         akismet_notify_moderators('node', $node, ($node->status ? TRUE : FALSE), FALSE);
         break;
       }
