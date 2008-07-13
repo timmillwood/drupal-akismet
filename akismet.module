@@ -1024,7 +1024,7 @@ function akismet_notify_moderators($content_type, $content, $is_published, $is_s
       '@title-label' => t('Subject'),
       '@content-title' => $content->subject,
       '@content-type' => t('comment'),
-      '!content-link' => url('node/'. $content->nid, NULL, 'comment-'. $content->cid, TRUE)
+      '!content-link' => url('node/'. $content->nid, array('fragment' => 'comment-'. $content->cid, 'absolute' => TRUE))
     );
   }
   else {
@@ -1032,7 +1032,7 @@ function akismet_notify_moderators($content_type, $content, $is_published, $is_s
       '@title-label' => t('Title'),
       '@content-title' => $content->title,
       '@content-type' => $moderator_types[$content->type],
-      '!content-link' => url('node/'. $content->nid, NULL, NULL, TRUE)
+      '!content-link' => url('node/'. $content->nid, array ('absolute' => TRUE))
     );
   }
   $message_args['@content-status'] = ($is_published ? t('published') : t('not published')) . ($is_spam ? ' ('. t('marked as spam') .')' : '');
@@ -1545,7 +1545,7 @@ function akismet_prepare_comment_data($content_type, $content) {
 
   // Prepare data that varies depending on type of content.
   if ($content_type == 'comment') {
-    $comment_data['permalink'] = url('node/'. $content->nid, NULL, 'comment-'. $content->cid, TRUE);
+    $comment_data['permalink'] = url('node/'. $content->nid, array('fragment' => 'comment-'. $content->cid, 'absolute' => TRUE));
     $comment_data['comment_author_email'] = $content->mail;
     $comment_data['comment_author_url'] = $content->homepage;
     $comment_data['comment_content'] = $content->comment;
