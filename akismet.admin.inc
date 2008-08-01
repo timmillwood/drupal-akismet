@@ -114,7 +114,7 @@ function _akismet_settings_form() {
   $form['node_options']['akismet_check_nodetypes'] = array(
     '#type' => 'checkboxes', '#title' => t('Check for spam in these node types'),
     '#options' => node_get_types('names'),
-    '#default_value' => variable_get('akismet_check_nodetypes', NULL),
+    '#default_value' => variable_get('akismet_check_nodetypes', array()),
     '#description' => t('Use this option to <em>enable</em> or <em>disable</em> spam check for nodes of types specified here. When this option is enabled, a request will be sent to the <a href="!akismet">Akismet Service</a>, in real time. If the <a href="!akismet">Akismet Service</a> was down, nodes would simply be queued for manual moderation. Users with <a href="!admin-access">@admin-nodes</a> permission and <a href="!admin-access">spam moderators</a> are exempt from this check.',
       array(
         '!akismet' => url('http://akismet.com'),
@@ -247,7 +247,7 @@ function _akismet_settings_form() {
   $form['anti_spambot']['akismet_antispambot_rules'] = array(
     '#type' => 'checkboxes', '#title' => t('Identify spambots by'),
     '#options' => $anti_spambot_rules,
-    '#default_value' => variable_get('akismet_antispambot_rules', NULL),
+    '#default_value' => variable_get('akismet_antispambot_rules', array()),
     '#description' => t('These rules will be applied before sending any request to the <a href="!akismet">Akismet Service</a>. If a request to send content matches any of these rules, the actions defined below will be triggered. Requests to send content are checked against spam that is stored locally (visible from the <a href="!moderation-queue">moderation queue</a>).',
       array(
         '!akismet' => url('http://akismet.com'),
