@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * Shutdown function executed at cron time.
