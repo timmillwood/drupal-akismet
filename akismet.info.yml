@@ -1,0 +1,4 @@
+name: Akismet
+type: module
+description: 'Spam protection via the Akismet service.'
+core: 8.x

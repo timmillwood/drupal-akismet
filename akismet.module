@@ -1,0 +1,32 @@
+<?php
+
+use Drupal\Core\Entity\EntityFormInterface;
+use Drupal\Core\Form\FormStateInterface;
+use TijsVerkoyen\Akismet\Akismet;
+
+/**
+ * Implements hook_form_alter().
+ */
+function akismet_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $form_object = $form_state->getFormObject();
+  // @todo Support more than comments.
+  if ($form_object instanceof EntityFormInterface && $form_object->getEntity()->getEntityTypeId() == 'comment') {
+    $form['#validate'][] = '_akismet_entity_form_validation';
+  }
+}
+
+function _akismet_entity_form_validation(array &$form, FormStateInterface $form_state) {
+  $key = \Drupal::service('settings')->get('akismet_key');
+  $url = \Drupal::request()->getSchemeAndHttpHost();
+  $akismet = new Akismet($key, $url);
+  if ($akismet->verifyKey()) {
+    //@todo Support more than just the first comment_body field value.
+    $comment = $form_state->getValue('comment_body')[0]['value'];
+    if ($akismet->isSpam($comment)) {
+      $form_state->setError($form, 'Looks like spam');
+    }
+  }
+  else {
+    $form_state->setError($form, 'Invalid key');
+  }
+}
