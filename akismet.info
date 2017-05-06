@@ -1,3 +1,0 @@
-name = Akismet
-description = Use the Akismet Service to protect your site from spam.
-core = 6.x
