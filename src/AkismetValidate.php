@@ -24,7 +24,7 @@ Class AkismetValidate {
       $definitions = \Drupal::entityManager()->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
       foreach ($definitions as $definition) {
         $value = $form_state->getValue($definition->getName());
-        if (in_array($definition->getType(), ['text_long', 'text_with_summary']) && isset($value)) {
+        if (in_array($definition->getType(), ['text_long', 'text_with_summary', 'string_long']) && isset($value)) {
           if ($akismet->isSpam($value)) {
             $form_state->setError($form, 'Looks like spam');
           }

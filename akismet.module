@@ -14,7 +14,7 @@ function akismet_form_alter(&$form, FormStateInterface $form_state, $form_id) {
     $entity = $form_state->getFormObject()->getEntity();
     $definitions = \Drupal::entityManager()->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
     foreach ($definitions as $definition) {
-      if (in_array($definition->getType(), ['text_long', 'text_with_summary'])) {
+      if (in_array($definition->getType(), ['text_long', 'text_with_summary', 'string_long'])) {
         $form['#validate'][] = [
           \Drupal::service('akismet.validate'),
           'validate'
