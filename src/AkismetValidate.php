@@ -17,13 +17,18 @@ Class AkismetValidate {
    * @param array $form
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    */
-  public static function validate(array &$form, FormStateInterface $form_state) {
-    $akismet = new Akismet(self::getKey(), self::getUrl());
+  public function validate(array &$form, FormStateInterface $form_state) {
+    $akismet = new Akismet($this->getKey(), $this->getUrl());
     if ($akismet->verifyKey()) {
-      //@todo Support more than just the first comment_body field value.
-      $comment = $form_state->getValue('comment_body')[0]['value'];
-      if ($akismet->isSpam($comment)) {
-        $form_state->setError($form, 'Looks like spam');
+      $entity = $form_state->getFormObject()->getEntity();
+      $definitions = \Drupal::entityManager()->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
+      foreach ($definitions as $definition) {
+        $value = $form_state->getValue($definition->getName());
+        if (in_array($definition->getType(), ['text_long', 'text_with_summary']) && isset($value)) {
+          if ($akismet->isSpam($value)) {
+            $form_state->setError($form, 'Looks like spam');
+          }
+        }
       }
     }
     else {
@@ -34,14 +39,14 @@ Class AkismetValidate {
   /**
    * @return string
    */
-  private static function getKey() {
+  private function getKey() {
     return \Drupal::service('settings')->get('akismet_key');
   }
 
   /**
    * @return string
    */
-  private static function getUrl() {
+  private function getUrl() {
     return \Drupal::request()->getSchemeAndHttpHost();
   }
 

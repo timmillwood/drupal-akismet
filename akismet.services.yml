@@ -1,0 +1,4 @@
+services:
+  akismet.validate:
+    class: Drupal\akismet\AkismetValidate
+    arguments: []

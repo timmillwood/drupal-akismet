@@ -10,7 +10,17 @@ use Drupal\Core\Form\FormStateInterface;
 function akismet_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   $form_object = $form_state->getFormObject();
   // @todo Support more than comments.
-  if ($form_object instanceof EntityFormInterface && $form_object->getEntity()->getEntityTypeId() == 'comment') {
-    $form['#validate'][] = [AkismetValidate::class, 'validate'];
+  if ($form_object instanceof EntityFormInterface) {
+    $entity = $form_state->getFormObject()->getEntity();
+    $definitions = \Drupal::entityManager()->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
+    foreach ($definitions as $definition) {
+      if (in_array($definition->getType(), ['text_long', 'text_with_summary'])) {
+        $form['#validate'][] = [
+          \Drupal::service('akismet.validate'),
+          'validate'
+        ];
+        return;
+      }
+    }
   }
 }
